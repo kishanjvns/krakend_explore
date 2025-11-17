@@ -1,0 +1,29 @@
+{
+  "version": 3,
+  "endpoints": [
+    {
+      "endpoint": "/api/users",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/users",
+          "host": ["http://user-service:8000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/products",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/products",
+          "host": ["http://product-service:8000"],
+          "encoding": "no-op"
+        }
+      ]
+    }
+  ]
+}
