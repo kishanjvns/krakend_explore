@@ -1,208 +1,61 @@
-1. What is Helm?
-Helm is essentially a package manager for Kubernetes, much like apt for Ubuntu or yum for CentOS. It simplifies the process of defining, installing, and upgrading Kubernetes applications.
-
-Installs Kubernetes Controllers and Third-Party Applications: Helm allows you to easily deploy complex applications like Prometheus, Grafana, Argo CD, Nginx Ingress Controller, and other common tools on your Kubernetes cluster.
-Manages Application Lifecycle: Beyond just installation, Helm enables you to:
-Install applications
-Update existing applications to newer versions
-Uninstall applications cleanly
-Package your own organizational applications as reusable Helm chart
-2. Why Use Helm?
-Without Helm, managing applications on Kubernetes can become a significant challenge, especially in complex environments.
-
-Avoids Manual YAML Management: Instead of dealing with numerous individual YAML files for deployments, services, config maps, etc., Helm bundles them into a single, manageable unit called a "chart".
-Reduces Maintenance Overhead: It eliminates the need for DevOps/SRE teams to write and maintain custom scripts for installing and upgrading various applications and their different versions across multiple environments.
-Simplifies Version Management: Helm allows you to easily deploy specific versions of applications and manage upgrades, ensuring consistency across different stages of your development pipeline.
-Enables Customization: Charts can be parameterized, allowing you to deploy the same application with different configurations (e.g., number of replicas, resource limits) for different environments.
-3. Installing Helm
-Helm is a client-side tool, meaning you install it on your local machine, not directly on the Kubernetes cluster (14:20-14:44). Helm interacts with your Kubernetes cluster using your kubeconfig file's current context, just like kubectl.
-
-Installation Commands (examples):
-
-macOS (Homebrew):
-bash
-brew install helm
-
-Windows (Chocolatey):
-bash
-choco install kubernetes-helm
-
-Linux (APT/DNF - refer to official docs for specific commands):
-bash
-
-Example for Debian/Ubuntu
+📦 What is Helm?Helm is essentially a package manager for Kubernetes, much like apt for Ubuntu or yum for CentOS.1 It simplifies the process of defining, installing, and upgrading applications on a Kubernetes cluster.2Key FunctionsInstalls Controllers and Third-Party Applications: Helm allows you to easily deploy complex applications like Prometheus, Grafana, Argo CD, Nginx Ingress Controller, and other common tools on your Kubernetes cluster.Manages Application Lifecycle: Beyond just installation, Helm enables you to:Install applications.Update existing applications to newer versions.Uninstall applications cleanly.Package your own organizational applications as reusable Helm charts.🤔 Why Use Helm?Without Helm, managing applications on Kubernetes can become a significant challenge, especially in complex environments.Avoids Manual YAML Management: Instead of dealing with numerous individual YAML files for deployments, services, config maps, etc., Helm bundles them into a single, manageable unit called a "chart".Reduces Maintenance Overhead: It eliminates the need for DevOps/SRE teams to write and maintain custom scripts for installing and upgrading various applications and their different versions across multiple environments.Simplifies Version Management: Helm allows you to easily deploy specific versions of applications and manage upgrades, ensuring consistency across different stages of your development pipeline.Enables Customization: Charts can be parameterized using a values.yaml file, allowing you to deploy the same application with different configurations (e.g., number of replicas, resource limits) for different environments.🛠️ Installing HelmHelm is a client-side tool—you install it on your local machine, not directly on the Kubernetes cluster.3 Helm interacts with your Kubernetes cluster using your kubeconfig file's current context, just like kubectl.Installation Commands (Examples)OSCommandmacOS (Homebrew)brew install helmWindows (Chocolatey)choco install kubernetes-helmLinux (Debian/Ubuntu)(Follow official guide, or use a command sequence like below)Bash# Example for Debian/Ubuntu
 curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
 sudo apt-get install apt-transport-https --yes
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
 sudo apt-get update
 sudo apt-get install helm
-
-Verify Installation:
-bash
-helm version
-
-Check Kubernetes Context (Helm uses this to interact with your cluster):
-bash
-kubectl config current-context
-
-4. Helm Key Concepts
-Helm Repository (Repo): A centralized location that hosts Helm charts.
-Example: Bitnami is a popular public repository for many common applications.
-Helm Chart: A package or bundle of an application, containing all the necessary Kubernetes resource definitions (YAML files).
-Helm Release: A deployed instance of a Helm chart on a Kubernetes cluster. When you install a chart, you give it a release name.
-5. Managing Third-Party Applications with Helm
-To install third-party applications, you typically follow these steps:
-
-Add the repository:
-bash
-helm repo add
-
-Example: Adding the Bitnami repository 
-bash
+Verify InstallationBashhelm version
+Check Kubernetes ContextBashkubectl config current-context
+🔑 Helm Key ConceptsConceptDescriptionAnalogyHelm Repository (Repo)A centralized location that hosts Helm charts. Example: Bitnami is a popular public repository.An App Store or Package IndexHelm ChartA package or bundle of an application, containing all the necessary Kubernetes resource definitions (YAML files).The Application Package/Setup FileHelm ReleaseA deployed instance of a Helm chart on a Kubernetes cluster. When you install a chart, you give it a unique name.The Installed Instance of the App⚙️ Managing Third-Party Applications with HelmTo install applications from the community or vendors, you use Helm Repositories.Add the RepositoryBashhelm repo add [repo-name] [repo-url]
+# Example: Adding the Bitnami repository 
 helm repo add bitnami https://charts.bitnami.com/bitnami
-
-Update Helm repositories (recommended):
-bash
+Update RepositoriesBash# Recommended to fetch the latest chart metadata
 helm repo update
-
-Search for a chart in a repository:
-bash
-helm search repo  [chart-name]
-
-Example: Searching for Nginx in Bitnami 
-bash
+Search for a ChartBashhelm search repo [chart-name]
+# Example: Searching for Nginx in Bitnami 
 helm search repo bitnami nginx
-
-Install a chart:
-bash
-helm install  /
-
-Example: Installing Nginx 
-bash
+Install a Chart (Create a Release)Bashhelm install [release-name] [repo-name]/[chart-name]
+# Example: Installing Nginx 
 helm install nginx-v1 bitnami/nginx
-
-Example: Installing Prometheus 
-bash
+# Example: Installing Prometheus 
 helm install prometheus bitnami/prometheus
-
-List installed releases:
-bash
-helm list
-
-Uninstall a release:
-bash
-helm uninstall
-
-Example: Uninstalling Nginx 
-bash
+Manage ReleasesList installed releases:Bashhelm list
+Uninstall a release (Removes all associated Kubernetes resources):Bashhelm uninstall [release-name]
+# Example: Uninstalling Nginx 
 helm uninstall nginx-v1
-
-Example: Uninstalling Prometheus 
-bash
-helm uninstall prometheus
-
-6. Creating and Managing Your Own Helm Charts
-This section demonstrates how to package your own applications as Helm charts, which is crucial for DevOps engineers.
-
-Scenario: Create Helm charts for two microservices: payments and shipping.
-
-Create project directories:
-bash
-mkdir -p best-commerce/{payments,shipping}
+🏗️ Creating and Managing Your Own Helm ChartsFor DevOps engineers, packaging your own microservices or organizational apps as Helm charts is critical.Scenario: Packaging 'payments' and 'shipping' microservices.Create the Basic Chart StructureBashmkdir -p best-commerce/{payments,shipping}
 cd best-commerce
-
-Create the basic Helm chart structure:
-bash
+# Create standard chart scaffolding
 helm create payments
 helm create shipping
-
-This command creates a standard Helm chart directory structure, including:
-
-Chart.yaml: Metadata for the chart .
-values.yaml: Default customizable values for the templates .
-templates/: Directory for Kubernetes YAML manifest files .
-Customize Chart Files:
-
-Chart.yaml (payments example):
-This file contains metadata about your chart.
-yaml
-apiVersion: v2
+This command creates a directory structure containing:Chart.yaml: Metadata for the chart.values.yaml: Default customizable values for the templates.4templates/: Directory for Kubernetes YAML manifest files.5Key File Customization (Example: payments chart)Chart.yaml (Metadata):YAMLapiVersion: v2
 name: payments
 description: A Helm chart for the payments microservice
 type: application
 version: 0.1.0 # Chart version
 appVersion: "1.0.0" # Application version
-
-templates/deployment.yaml (payments example) (42:20):
-This file defines your Kubernetes Deployment. Variables enclosed in {{ .Values. }} are placeholders that will be replaced by values from values.yaml.
-
-yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-name: {{ .Release.Name }}-deployment
-labels:
-app: {{ .Release.Name }}
+templates/deployment.yaml (The Kubernetes manifest):Templates use Go template syntax. The {{ .Values. }} syntax is replaced by values from values.yaml.YAML# ... (Snipped for brevity)
 spec:
-replicas: 1 # Hardcoded for simplicity, can be a variable
-selector:
-matchLabels:
-app: {{ .Release.Name }}
-template:
-metadata:
-labels:
-app: {{ .Release.Name }}
-spec:
-containers:
-- name: {{ .Release.Name }}
-image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-imagePullPolicy: {{ .Values.image.pullPolicy }}
-command: ["sh", "-c", "echo '{{ .Values.appMessage }}' && sleep 3600"]
-
-values.yaml (payments example) :
-This file provides the default values for the variables used in your templates.
-
-yaml
-image:
-repository: busybox
-tag: latest
-pullPolicy: IfNotPresent
+  containers:
+    - name: {{ .Release.Name }}
+      image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      command: ["sh", "-c", "echo '{{ .Values.appMessage }}' && sleep 3600"]
+# ...
+values.yaml (Default configuration):YAMLimage:
+  repository: busybox
+  tag: latest
+  pullPolicy: IfNotPresent
 
 appMessage: "I am a payment service"
-
-Repeat similar steps for the shipping chart, changing appMessage in values.yaml to "I am a shipment service".
-
-Package Your Charts:
-Navigate back to the best-commerce directory where payments and shipping folders reside.
-bash
-cd ..
+(Repeat similar steps for the shipping chart, changing appMessage.)Package Your ChartsNavigate back to the parent directory where payments and shipping folders reside:Bashcd ..
+# Creates payments-0.1.0.tgz and shipping-0.1.0.tgz
 helm package payments
 helm package shipping
-
-This command creates a .tgz archive for each chart (e.g., payments-0.1.0.tgz, shipping-0.1.0.tgz), which is the deployable Helm chart .
-
-Create a Helm Repository Index:
-This command generates an index.yaml file, which acts as a catalog for your local Helm repository, listing all available charts.
-bash
-helm repo index .
-
-You can then publish this index.yaml and the .tgz files to a centralized location like Nexus, Artifactory, or GitHub Pages for others to consume.
-
-7. Customizing Chart Installation with --set
-When installing a chart, you can override values defined in its values.yaml file using the --set flag. This is useful for environment-specific configurations without modifying the chart directly.
-
-View Available Values for a Chart:
-bash
-helm show values /
-
-Example:
-bash
+Create a Helm Repository IndexThis command generates an index.yaml file, which acts as a catalog for your local Helm repository:Bashhelm repo index .
+You would then publish this index.yaml along with the .tgz files to a central location (like Nexus, Artifactory, or GitHub Pages) for others to consume.⚙️ Customizing Chart Installation with --setYou can override any default value defined in a chart's values.yaml file by using the --set flag during installation.6 This is key for environment-specific configurations.View Available Values for a ChartBashhelm show values [repo-name]/[chart-name]
+# Example:
 helm show values bitnami/nginx
-
-Install with Custom Values:
-bash
-helm install  / --set =
-
-Example: If an Nginx chart had a replicaCount value:
-bash
+Install with Custom ValuesBashhelm install [release-name] [repo-name]/[chart-name] --set [key]=[value]
+# Example: Setting the number of replicas to 3
 helm install my-nginx bitnami/nginx --set replicaCount=3
