@@ -1,0 +1,113 @@
+{
+  "$schema": "https://www.krakend.io/schema/v2.7/krakend.json",
+  "version": 3,
+  "name": "TrueCare API Gateway",
+  "port": 8080,
+  "timeout": "3000ms",
+  "cache_ttl": "300s",
+  "endpoints": [
+
+    {
+      "endpoint": "/api/v1/patients",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/patients",
+          "host": ["http://patient-service:8081"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/patients/status/{status}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/patients/status/{status}",
+          "host": ["http://patient-service:8081"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/patients/active",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/patients/active",
+          "host": ["http://patient-service:8081"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/patients/{id}",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/patients/{id}",
+          "host": ["http://patient-service:8081"],
+          "encoding": "json"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/referrals",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/referrals",
+          "host": ["http://referral-service:8082"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/referrals/open",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/referrals/open",
+          "host": ["http://referral-service:8082"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/referrals/patient/{patientId}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/referrals/patient/{patientId}",
+          "host": ["http://referral-service:8082"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/referrals/{referralId}",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/referrals/{referralId}",
+          "host": ["http://referral-service:8082"],
+          "encoding": "json"
+        }
+      ]
+    }
+
+  ]
+}

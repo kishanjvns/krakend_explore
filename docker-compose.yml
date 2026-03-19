@@ -1,0 +1,79 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  TrueCare — KrakenD Step 2 Learning Setup
+#
+#  Ports (what you call on your local machine):
+#    8080 → KrakenD   (the ONLY port clients should call)
+#    8081 → patient-service  (for direct debug only — not called by clients)
+#    8082 → referral-service (for direct debug only — not called by clients)
+#
+#  Internal Docker network (how KrakenD calls backends):
+#    http://patient-service:8081   (container name = DNS hostname)
+#    http://referral-service:8082
+#
+#  In your EKS setup this maps to Kubernetes ClusterIP service DNS:
+#    http://patient-service.trucare.svc.cluster.local:8081
+# ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  trucare-net:
+    driver: bridge
+
+services:
+
+  # ── Patient Service (Spring Boot, Java 17, port 8081) ──────────────────────
+  patient-service:
+    build:
+      context: ./patient-service
+      dockerfile: Dockerfile
+    container_name: patient-service
+    ports:
+      - "8081:8081"
+    networks:
+      - trucare-net
+    healthcheck:
+      # Spring Actuator /actuator/health endpoint
+      # wget is available in the alpine base image
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8081/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s    # Spring Boot needs ~30s to start on first build
+
+  # ── Referral Service (Spring Boot, Java 17, port 8082) ─────────────────────
+  referral-service:
+    build:
+      context: ./referral-service
+      dockerfile: Dockerfile
+    container_name: referral-service
+    ports:
+      - "8082:8082"
+    networks:
+      - trucare-net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8082/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  # ── KrakenD API Gateway (port 8080) ────────────────────────────────────────
+  krakend:
+    image: devopsfaith/krakend:2.7
+    container_name: krakend
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount krakend/ folder — create krakend.json here manually (Step 2 exercise)
+      - ./krakend:/etc/krakend
+    command: ["run", "--config", "/etc/krakend/krakend.json", "--debug"]
+    networks:
+      - trucare-net
+    depends_on:
+      patient-service:
+        condition: service_healthy
+      referral-service:
+        condition: service_healthy
