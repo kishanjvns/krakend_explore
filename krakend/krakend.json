@@ -45,7 +45,30 @@
         }
       ]
     },
+    {
+      "endpoint": "/api/v1/patients-summary/{id}",
+      "method": "GET",
 
+      "backend": [
+        {
+          "url_pattern": "/patients/{id}",
+          "host": ["http://patient-service:8081"],
+          "encoding": "json",
+          "allow": ["id", "name", "age", "diagnosis", "assignedDoctor", "status", "isActive"],
+          "group": "patient-info"
+        },
+        {
+          "url_pattern": "/referrals/patient/{id}",
+          "host": ["http://referral-service:8082"],
+          "encoding": "json",
+          "is_collection": true,
+          "mapping": {
+            "collection": "referrals"
+          },
+          "group": "referrals-info"
+        }
+      ]
+    },
     {
       "endpoint": "/api/v1/patients/{id}",
       "method": "GET",
