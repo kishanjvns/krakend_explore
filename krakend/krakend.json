@@ -1,11 +1,52 @@
 {
   "$schema": "https://www.krakend.io/schema/v2.7/krakend.json",
   "version": 3,
-  "name": "TrueCare API Gateway",
+  "name": "TrueCare API Gateway — Local Dev with Keycloak",
   "port": 8080,
   "timeout": "3000ms",
   "cache_ttl": "300s",
+
   "endpoints": [
+
+    {
+      "endpoint": "/api/v1/patient-summary/{id}",
+      "method": "GET",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/trucare",
+          "cache": true,
+          "cache_duration": 900,
+          "disable_jwk_security": true,
+          "roles_key": "role",
+          "roles": ["DOCTOR", "ADMIN"],
+          "propagate_claims": [
+            ["sub",   "X-User-Id"],
+            ["email", "X-User-Email"],
+            ["role",  "X-User-Role"],
+            ["name",  "X-User-Name"]
+          ]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/patients/{id}",
+          "host": ["http://patient-service:8081"],
+          "encoding": "json",
+          "allow": ["id", "name", "age", "diagnosis", "assignedDoctor", "status", "isActive"]
+        },
+        {
+          "url_pattern": "/referrals/patient/{id}",
+          "host": ["http://referral-service:8082"],
+          "encoding": "json",
+          "is_collection": true,
+          "mapping": {
+            "collection": "referrals"
+          }
+        }
+      ]
+    },
 
     {
       "endpoint": "/api/v1/patients",
@@ -45,33 +86,28 @@
         }
       ]
     },
-    {
-      "endpoint": "/api/v1/patients-summary/{id}",
-      "method": "GET",
 
-      "backend": [
-        {
-          "url_pattern": "/patients/{id}",
-          "host": ["http://patient-service:8081"],
-          "encoding": "json",
-          "allow": ["id", "name", "age", "diagnosis", "assignedDoctor", "status", "isActive"],
-          "group": "patient-info"
-        },
-        {
-          "url_pattern": "/referrals/patient/{id}",
-          "host": ["http://referral-service:8082"],
-          "encoding": "json",
-          "is_collection": true,
-          "mapping": {
-            "collection": "referrals"
-          },
-          "group": "referrals-info"
-        }
-      ]
-    },
     {
       "endpoint": "/api/v1/patients/{id}",
       "method": "GET",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/trucare",
+          "cache": true,
+          "cache_duration": 900,
+          "disable_jwk_security": true,
+          "roles_key": "role",
+          "roles": ["DOCTOR", "NURSE", "ADMIN"],
+          "propagate_claims": [
+            ["sub",   "X-User-Id"],
+            ["email", "X-User-Email"],
+            ["role",  "X-User-Role"],
+            ["name",  "X-User-Name"]
+          ]
+        }
+      },
       "backend": [
         {
           "url_pattern": "/patients/{id}",
@@ -85,6 +121,24 @@
       "endpoint": "/api/v1/referrals",
       "method": "GET",
       "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/trucare",
+          "cache": true,
+          "cache_duration": 900,
+          "disable_jwk_security": true,
+          "roles_key": "role",
+          "roles": ["DOCTOR", "ADMIN"],
+          "propagate_claims": [
+            ["sub",   "X-User-Id"],
+            ["email", "X-User-Email"],
+            ["role",  "X-User-Role"],
+            ["name",  "X-User-Name"]
+          ]
+        }
+      },
       "backend": [
         {
           "url_pattern": "/referrals",
@@ -98,6 +152,24 @@
       "endpoint": "/api/v1/referrals/open",
       "method": "GET",
       "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/trucare",
+          "cache": true,
+          "cache_duration": 900,
+          "disable_jwk_security": true,
+          "roles_key": "role",
+          "roles": ["DOCTOR", "NURSE", "ADMIN"],
+          "propagate_claims": [
+            ["sub",   "X-User-Id"],
+            ["email", "X-User-Email"],
+            ["role",  "X-User-Role"],
+            ["name",  "X-User-Name"]
+          ]
+        }
+      },
       "backend": [
         {
           "url_pattern": "/referrals/open",
@@ -111,6 +183,24 @@
       "endpoint": "/api/v1/referrals/patient/{patientId}",
       "method": "GET",
       "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/trucare",
+          "cache": true,
+          "cache_duration": 900,
+          "disable_jwk_security": true,
+          "roles_key": "role",
+          "roles": ["DOCTOR", "NURSE", "ADMIN"],
+          "propagate_claims": [
+            ["sub",   "X-User-Id"],
+            ["email", "X-User-Email"],
+            ["role",  "X-User-Role"],
+            ["name",  "X-User-Name"]
+          ]
+        }
+      },
       "backend": [
         {
           "url_pattern": "/referrals/patient/{patientId}",
@@ -123,6 +213,24 @@
     {
       "endpoint": "/api/v1/referrals/{referralId}",
       "method": "GET",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/trucare",
+          "cache": true,
+          "cache_duration": 900,
+          "disable_jwk_security": true,
+          "roles_key": "role",
+          "roles": ["DOCTOR", "NURSE", "ADMIN"],
+          "propagate_claims": [
+            ["sub",   "X-User-Id"],
+            ["email", "X-User-Email"],
+            ["role",  "X-User-Role"],
+            ["name",  "X-User-Name"]
+          ]
+        }
+      },
       "backend": [
         {
           "url_pattern": "/referrals/{referralId}",

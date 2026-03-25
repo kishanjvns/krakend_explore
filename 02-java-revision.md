@@ -332,3 +332,252 @@ A: `Stream.toList()` returns an unmodifiable list (Java 16+). `Collectors.toList
 
 **Q: Why is Optional.get() considered bad practice?**
 A: It throws `NoSuchElementException` if the Optional is empty — the same problem as NullPointerException but with less context. Always use `orElseThrow()`, `orElse()`, or `orElseGet()`.
+
+
+
+# Java Revision — Interview & Concept Guide
+### Step 4: JWT Auth (New Java concepts introduced)
+
+---
+
+## 1. ThreadLocal<T> — per-thread isolated storage
+
+### What it is
+`ThreadLocal<T>` provides a variable where each thread has its own independent value.
+No synchronisation is needed — threads can never see each other's values.
+
+### Used in this project
+`UserContextHolder.java` — stores `UserContext` per request thread.
+
+### Syntax comparison
+```java
+// Java 8 — ThreadLocal declaration
+private static final ThreadLocal<UserContext> HOLDER = new ThreadLocal<>();
+
+// Java 17 — identical syntax (ThreadLocal hasn't changed)
+// but the stored TYPE (UserContext) is now a record — immutable
+private static final ThreadLocal<UserContext> HOLDER = new ThreadLocal<>();
+```
+
+### How it works in Tomcat
+```
+Thread 1 (Request from Dr. Mehta):
+  HOLDER.set(new UserContext("U001", "dr.mehta@trucare.com", "DOCTOR", "Dr. Mehta"))
+  Controller reads HOLDER.get() → UserContext{userId=U001, role=DOCTOR}
+  HOLDER.remove()   ← CRITICAL cleanup
+
+Thread 2 (Request from Nurse Priya — same time):
+  HOLDER.set(new UserContext("U002", "priya@trucare.com", "NURSE", "Nurse Priya"))
+  Controller reads HOLDER.get() → UserContext{userId=U002, role=NURSE}
+  HOLDER.remove()   ← each thread cleans its own slot
+```
+
+Thread 1 and Thread 2 never see each other's UserContext.
+
+### The memory leak trap
+```java
+// WRONG — causes memory leak in thread-pool environments
+HOLDER.set(null);      // sets null but thread-local slot still exists
+
+// CORRECT — fully removes the thread-local binding
+HOLDER.remove();       // frees the memory completely
+```
+
+Tomcat reuses threads from its pool. If Thread 1 doesn't call `.remove()`,
+the next request on Thread 1 sees the previous user's context.
+This is a security bug AND a memory leak.
+
+### Interview note
+> "ThreadLocal is one of the most misused Java concurrency tools. Its correct use is
+> for per-request context in thread-per-request frameworks like Tomcat. The critical rule
+> is always calling `.remove()` in a finally block or interceptor `afterCompletion()`.
+> Spring's own `RequestContextHolder`, `SecurityContextHolder`, and `TransactionSynchronizationManager`
+> all use ThreadLocal internally."
+
+---
+
+## 2. HandlerInterceptor — Spring MVC request lifecycle hook
+
+### What it is
+An interface with three lifecycle methods that wrap every controller invocation.
+
+### Used in this project
+`JwtClaimsInterceptor.java`
+
+### Three hook points
+```java
+public interface HandlerInterceptor {
+
+    // Runs BEFORE controller — return false to abort request
+    default boolean preHandle(HttpServletRequest req,
+                              HttpServletResponse res,
+                              Object handler) throws Exception {
+        return true;
+    }
+
+    // Runs AFTER controller, BEFORE response written
+    // Can modify ModelAndView — rarely used in REST APIs
+    default void postHandle(HttpServletRequest req,
+                            HttpServletResponse res,
+                            Object handler,
+                            ModelAndView mv) throws Exception { }
+
+    // Runs AFTER response written — use for cleanup
+    default void afterCompletion(HttpServletRequest req,
+                                 HttpServletResponse res,
+                                 Object handler,
+                                 Exception ex) throws Exception { }
+}
+```
+
+### Java 8 default methods — why no abstract class needed
+Before Java 8, Spring provided `HandlerInterceptorAdapter` (abstract class)
+so you only had to implement the methods you needed.
+After Java 8, interface default methods made the adapter redundant.
+`HandlerInterceptorAdapter` was deprecated in Spring 5.3.
+
+```java
+// Java 7 era — had to extend adapter to avoid implementing all 3 methods
+public class JwtInterceptor extends HandlerInterceptorAdapter {
+    @Override
+    public boolean preHandle(...) { ... }
+    // postHandle and afterCompletion inherited as no-ops from adapter
+}
+
+// Java 8+ — implement interface directly, use defaults for unused methods
+public class JwtInterceptor implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(...) { ... }
+    // postHandle and afterCompletion use interface default implementations
+}
+```
+
+---
+
+## 3. Record compact constructor — validation pattern
+
+### Used in this project
+`UserContext.java` compact constructor validates `userId` is present.
+
+```java
+public record UserContext(String userId, String email,
+                          String role, String name) {
+    // Compact constructor — parameters already assigned when this runs
+    public UserContext {
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalStateException(
+                "X-User-Id header missing — check KrakenD config");
+        }
+    }
+}
+```
+
+### Why `IllegalStateException` not `IllegalArgumentException`
+```
+IllegalArgumentException → caller passed a bad argument (their fault)
+IllegalStateException    → system is in an unexpected state (our config fault)
+```
+
+Missing `X-User-Id` means KrakenD didn't propagate the claim — that's a
+configuration error in `krakend.json`, not bad user input.
+The exception type communicates who is at fault.
+
+---
+
+## 4. Static factory methods on records
+
+### Used in this project
+`UserContext.anonymous()` — creates a GUEST context for public endpoints.
+
+```java
+public record UserContext(String userId, String email,
+                          String role, String name) {
+
+    // Static factory — named constructor communicates intent
+    public static UserContext anonymous() {
+        return new UserContext("anonymous", null, "GUEST", null);
+    }
+}
+```
+
+### Java 8 equivalent
+```java
+// Java 8 — static factory on a regular class
+public class UserContext {
+    public static UserContext anonymous() {
+        return new UserContext("anonymous", null, "GUEST", null);
+    }
+}
+```
+
+### Why named factory over constructor
+`new UserContext("anonymous", null, "GUEST", null)` — unclear, error-prone
+`UserContext.anonymous()` — self-documenting, impossible to pass args in wrong order
+
+---
+
+## 5. Logger and SLF4J — production logging pattern
+
+### Used in this project
+`PatientController`, `ReferralController`, `JwtClaimsInterceptor` all use SLF4J.
+
+```java
+// Java 17 — field declaration
+private static final Logger log = LoggerFactory.getLogger(PatientController.class);
+
+// Usage — parameterised to avoid string concatenation when logging is disabled
+log.info("GET /patients/{} accessed by userId={} role={}", id, ctx.userId(), ctx.role());
+```
+
+### Why parameterised logging matters
+```java
+// WRONG — string concatenated even when INFO logging is disabled
+log.info("GET /patients/" + id + " by " + ctx.userId() + " role=" + ctx.role());
+
+// CORRECT — {} placeholders only evaluated if INFO is enabled
+log.info("GET /patients/{} by userId={} role={}", id, ctx.userId(), ctx.role());
+```
+
+At DEBUG level in production (logging.level.com.trucare=WARN), the parameterised
+version creates zero string objects. The WRONG version creates strings even when
+the log line is discarded — wasted GC pressure on every request.
+
+### Log levels — when to use each
+| Level | Use for |
+|---|---|
+| `ERROR` | System failures, exceptions that need immediate attention |
+| `WARN` | Unexpected but recoverable situations |
+| `INFO` | Business events — who did what (audit trail) |
+| `DEBUG` | Developer diagnostics — request/response details |
+| `TRACE` | Fine-grained flow — rarely used in production |
+
+---
+
+## Common Interview Questions from Step 4
+
+**Q: What is ThreadLocal and when should you use it?**
+
+A: ThreadLocal provides per-thread storage — each thread gets its own isolated
+copy of the value with no synchronisation needed. Use it for per-request context
+in thread-per-request servers like Tomcat, where you need to pass contextual data
+(user identity, request ID, locale) through call chains without modifying method
+signatures. The critical rule: always call `.remove()` in cleanup code —
+Tomcat reuses threads and leaked ThreadLocal values corrupt subsequent requests.
+
+**Q: What is the difference between `HandlerInterceptor` and a Servlet `Filter`?**
+
+A: A Servlet Filter operates at the Servlet container level — it sees the raw
+`HttpServletRequest` before Spring MVC processes it, and runs for ALL requests
+including static resources. A `HandlerInterceptor` operates inside Spring MVC —
+it runs only for requests handled by `@Controller` methods, has access to the
+handler object, and integrates with Spring's exception handling.
+For cross-cutting concerns like user context population, `HandlerInterceptor`
+is preferred because it participates in the Spring MVC lifecycle.
+
+**Q: Why use `IllegalStateException` instead of `IllegalArgumentException`?**
+
+A: `IllegalArgumentException` signals the caller passed invalid data — it's their
+fault. `IllegalStateException` signals the system is in an inconsistent state —
+it's a configuration or programming error. Missing `X-User-Id` in our code means
+KrakenD didn't propagate the claim correctly — that's our configuration problem,
+not bad user input, so `IllegalStateException` is semantically correct.

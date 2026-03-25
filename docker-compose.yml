@@ -1,19 +1,20 @@
 version: "3.9"
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  TrueCare — KrakenD Step 2 Learning Setup
+#  TrueCare — Step 4 Local Auth Setup
 #
-#  Ports (what you call on your local machine):
-#    8080 → KrakenD   (the ONLY port clients should call)
-#    8081 → patient-service  (for direct debug only — not called by clients)
-#    8082 → referral-service (for direct debug only — not called by clients)
+#  Ports:
+#    8090 → Keycloak Admin UI  (replaces AWS Cognito locally)
+#    8080 → KrakenD API Gateway
+#    8081 → patient-service
+#    8082 → referral-service
 #
-#  Internal Docker network (how KrakenD calls backends):
-#    http://patient-service:8081   (container name = DNS hostname)
-#    http://referral-service:8082
+#  Keycloak replaces Cognito for local development.
+#  From KrakenD's perspective ONLY the jwk_url changes:
+#    Cognito : https://cognito-idp.region.amazonaws.com/poolId/.well-known/jwks.json
+#    Keycloak: http://keycloak:8090/realms/trucare/protocol/openid-connect/certs
 #
-#  In your EKS setup this maps to Kubernetes ClusterIP service DNS:
-#    http://patient-service.trucare.svc.cluster.local:8081
+#  Everything else (alg, propagate_claims, roles) stays identical.
 # ─────────────────────────────────────────────────────────────────────────────
 
 networks:
@@ -22,7 +23,35 @@ networks:
 
 services:
 
-  # ── Patient Service (Spring Boot, Java 17, port 8081) ──────────────────────
+  # ── Keycloak — Local Identity Provider (replaces AWS Cognito) ───────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.3
+    container_name: keycloak
+    command:
+      - start-dev
+      - --import-realm          # auto-imports trucare-realm.json on first start
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8090
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./keycloak/realm:/opt/keycloak/data/import  # realm JSON auto-imported
+    networks:
+      - trucare-net
+    healthcheck:
+      test: ["CMD-SHELL",
+             "exec 3<>/dev/tcp/localhost/8090 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s    # Keycloak takes ~60-80s on first start with realm import
+
+  # ── Patient Service (Spring Boot, Java 17) ──────────────────────────────────
   patient-service:
     build:
       context: ./patient-service
@@ -33,16 +62,17 @@ services:
     networks:
       - trucare-net
     healthcheck:
-      # Spring Actuator /actuator/health endpoint
-      # wget is available in the alpine base image
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
              "http://localhost:8081/actuator/health"]
       interval: 20s
       timeout: 5s
       retries: 5
-      start_period: 45s    # Spring Boot needs ~30s to start on first build
+      start_period: 45s
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
-  # ── Referral Service (Spring Boot, Java 17, port 8082) ─────────────────────
+  # ── Referral Service (Spring Boot, Java 17) ─────────────────────────────────
   referral-service:
     build:
       context: ./referral-service
@@ -59,20 +89,24 @@ services:
       timeout: 5s
       retries: 5
       start_period: 45s
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
-  # ── KrakenD API Gateway (port 8080) ────────────────────────────────────────
+  # ── KrakenD API Gateway ─────────────────────────────────────────────────────
   krakend:
     image: devopsfaith/krakend:2.7
     container_name: krakend
     ports:
       - "8080:8080"
     volumes:
-      # Mount krakend/ folder — create krakend.json here manually (Step 2 exercise)
       - ./krakend:/etc/krakend
     command: ["run", "--config", "/etc/krakend/krakend.json", "--debug"]
     networks:
       - trucare-net
     depends_on:
+      keycloak:
+        condition: service_healthy
       patient-service:
         condition: service_healthy
       referral-service:

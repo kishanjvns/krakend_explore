@@ -1,7 +1,11 @@
 package com.trucare.controller;
 
+import com.trucare.interceptor.UserContextHolder;
 import com.trucare.model.ReferralResponse;
+import com.trucare.model.UserContext;
 import com.trucare.service.ReferralService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,38 +13,26 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * REST Controller — HTTP entry point for referral-service.
+ * Updated ReferralController — Step 4: JWT Claims Awareness
  *
- * Spring Boot CONCEPT — @RestController
- *   = @Controller + @ResponseBody
- *   Every return value is auto-serialised to JSON.
+ * Same UserContext pattern as PatientController.
+ * In a real healthcare system, referral access is strictly role-based:
+ *   - Doctors can view and create referrals for their own patients
+ *   - Nurses can view referrals assigned to their ward
+ *   - Admins can view all referrals
  *
- * URL mapping strategy:
- *   Internal (KrakenD calls)  : /referrals
- *   External (client calls)   : /api/v1/referrals  ← defined in krakend.json
- *
- * IMPORTANT — Spring MVC path specificity rules:
- *   When multiple mappings share the same base path, Spring resolves them
- *   by specificity — literal segments beat wildcard segments.
- *   So /referrals/open beats /referrals/{referralId} because "open" is
- *   a literal, not a variable. Declare order does NOT matter here.
- *
- *   However, /referrals/patient/{patientId} and /referrals/{referralId}
- *   are BOTH one wildcard segment — Spring picks the most specific based
- *   on the full path depth. Since "patient" is a literal prefix, Spring
- *   correctly routes /referrals/patient/P001 to getReferralsByPatientId.
- *
- * Interview note:
- *   Understanding Spring MVC path specificity matters in interviews.
- *   The rule: more literal characters = more specific = higher priority.
+ * Here we demonstrate the pattern with logging.
+ * Step 6 (transformations) will show how KrakenD can filter response
+ * fields based on the forwarded role claim.
  */
 @RestController
 @RequestMapping("/referrals")
 public class ReferralController {
 
+    private static final Logger log = LoggerFactory.getLogger(ReferralController.class);
+
     private final ReferralService referralService;
 
-    /** Constructor injection — preferred over @Autowired field injection. */
     public ReferralController(ReferralService referralService) {
         this.referralService = referralService;
     }
@@ -51,18 +43,19 @@ public class ReferralController {
      */
     @GetMapping
     public ResponseEntity<List<ReferralResponse>> getAllReferrals() {
+        UserContext ctx = UserContextHolder.get();
+        log.info("GET /referrals by userId={} role={}", ctx.userId(), ctx.role());
         return ResponseEntity.ok(referralService.getAllReferrals());
     }
 
     /**
      * GET /referrals/open
      * KrakenD exposes as: GET /api/v1/referrals/open
-     *
-     * Literal path segment — Spring MVC resolves this BEFORE /{referralId}
-     * even without explicit ordering.
      */
     @GetMapping("/open")
     public ResponseEntity<List<ReferralResponse>> getOpenReferrals() {
+        UserContext ctx = UserContextHolder.get();
+        log.info("GET /referrals/open by userId={}", ctx.userId());
         return ResponseEntity.ok(referralService.getOpenReferrals());
     }
 
@@ -73,6 +66,8 @@ public class ReferralController {
     @GetMapping("/status/{status}")
     public ResponseEntity<List<ReferralResponse>> getReferralsByStatus(
             @PathVariable String status) {
+        UserContext ctx = UserContextHolder.get();
+        log.info("GET /referrals/status/{} by userId={}", status, ctx.userId());
         return ResponseEntity.ok(referralService.getReferralsByStatus(status));
     }
 
@@ -80,34 +75,43 @@ public class ReferralController {
      * GET /referrals/patient/{patientId}
      * KrakenD exposes as: GET /api/v1/referrals/patient/{patientId}
      *
-     * Returns all referrals for a given patient.
-     * This endpoint is KEY for Step 3 aggregation — KrakenD will call BOTH
-     * /patients/{id} and /referrals/patient/{id} in parallel and merge them
-     * into a single patient-summary response.
+     * This endpoint is also called internally during aggregation
+     * (GET /api/v1/patient-summary/{id} from Step 3).
+     * In that case, KrakenD forwards the same claim headers it received
+     * from the original client request.
      */
     @GetMapping("/patient/{patientId}")
     public ResponseEntity<List<ReferralResponse>> getReferralsByPatientId(
             @PathVariable String patientId) {
+        UserContext ctx = UserContextHolder.get();
+        log.info("GET /referrals/patient/{} by userId={} role={}",
+                patientId, ctx.userId(), ctx.role());
+
+        /*
+         * Future role-based access:
+         * if (!ctx.isDoctor() && !ctx.isAdmin() && !ctx.isNurse()) {
+         *     throw new AccessDeniedException("Insufficient role to view referrals");
+         * }
+         */
+
         return ResponseEntity.ok(referralService.getReferralsByPatientId(patientId));
     }
 
     /**
      * GET /referrals/{referralId}
      * KrakenD exposes as: GET /api/v1/referrals/{referralId}
-     *
-     * Single-segment wildcard — resolved after all literal paths above.
      */
     @GetMapping("/{referralId}")
     public ResponseEntity<ReferralResponse> getReferralById(
             @PathVariable String referralId) {
+        UserContext ctx = UserContextHolder.get();
+        log.info("GET /referrals/{} by userId={}", referralId, ctx.userId());
         return ResponseEntity.ok(referralService.getReferralById(referralId));
     }
 
     /**
      * GET /referrals/health
-     * Used by: Docker healthcheck, ALB target group, KrakenD backend probes.
-     *
-     * Java 9+: Map.of() — unmodifiable map, concise syntax.
+     * Public — excluded from interceptor.
      */
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {

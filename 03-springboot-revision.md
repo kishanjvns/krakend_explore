@@ -393,3 +393,273 @@ A: A global exception handler for all @RestController classes. It combines @Cont
 
 **Q: What does ResponseEntity give you that a plain return type doesn't?**
 A: Explicit control over HTTP status codes, response headers, and the body. Critical for REST semantics (201 for create, 204 for delete) and for KrakenD to correctly interpret backend responses for circuit-breaking and aggregation fallback.
+
+
+
+# Spring Boot & Security Revision — Interview & Concept Guide
+### Step 4: JWT Auth (Spring Boot security concepts)
+
+---
+
+## 1. WebMvcConfigurer — extending without replacing
+
+### What it is
+An interface that lets you add to Spring MVC's auto-configured setup selectively.
+
+### Used in this project
+`WebMvcConfig.java` registers `JwtClaimsInterceptor`.
+
+```java
+@Configuration
+public class WebMvcConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(jwtClaimsInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns("/actuator/**", "/patients/health");
+    }
+}
+```
+
+🔎 **What it means word by word:**
+
+`implements WebMvcConfigurer` — adds to Spring MVC, does NOT replace it.
+  Using `@EnableWebMvc` would replace auto-configuration entirely — wrong choice here.
+
+`addPathPatterns("/**")` — intercept every path under the application root.
+
+`excludePathPatterns("/actuator/**")` — Actuator health checks must not go through
+  the interceptor. If they do and `X-User-Id` is missing, `UserContext.anonymous()`
+  is set — harmless but unnecessary overhead on every health check cycle.
+
+### Evolution — why no WebMvcConfigurerAdapter
+```
+Spring 3.x : WebMvcConfigurerAdapter (abstract class with empty implementations)
+              Needed because Java 7 interfaces require ALL methods to be implemented
+
+Spring 5.x : WebMvcConfigurerAdapter deprecated
+              Java 8 interface default methods make adapters obsolete
+
+Spring Boot 3.x : implement WebMvcConfigurer directly
+                  All unused methods have default empty implementations
+```
+
+---
+
+## 2. Spring Security vs KrakenD auth — why we don't use Spring Security here
+
+### What Spring Security would look like
+```java
+// If we used Spring Security (NOT what we do)
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        return http
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/patients").permitAll()
+                .requestMatchers("/patients/{id}").hasRole("DOCTOR")
+                .anyRequest().authenticated()
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+            .build();
+    }
+}
+```
+
+### Why we explicitly disable Spring Security
+```properties
+# application.properties
+spring.autoconfigure.exclude=\
+  org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+```
+
+🔎 **The reasoning:**
+
+Auth is KrakenD's responsibility. If our Spring Boot service also validates JWT:
+- Double validation → double latency on every request
+- Two configs to maintain and keep in sync
+- Spring Security adds a 9-filter chain to every request — unnecessary overhead
+- Services are not internet-facing — only KrakenD can reach them
+
+🔎 **The trust model:**
+```
+Internet → KrakenD (validates JWT, strips token, adds claim headers)
+                  ↓
+        Kubernetes internal network
+                  ↓
+        patient-service (trusts KrakenD-forwarded headers)
+```
+
+Services trust KrakenD-forwarded headers because:
+1. They are only reachable via `ClusterIP` — not from the internet
+2. KrakenD is the only thing calling them
+3. No external party can forge `X-User-Id` because they can't reach the service directly
+
+### When you WOULD use Spring Security in microservices
+- Service-to-service mTLS (Istio alternative — which you removed)
+- If services need to be directly accessible without a gateway
+- If different services have different auth requirements that can't be expressed in KrakenD
+
+---
+
+## 3. @Component on HandlerInterceptor
+
+### What it means
+`@Component` on `JwtClaimsInterceptor` makes it a Spring-managed bean.
+`WebMvcConfig` receives it via constructor injection and registers it.
+
+```java
+@Component              // Spring manages lifecycle
+public class JwtClaimsInterceptor implements HandlerInterceptor { ... }
+
+@Configuration
+public class WebMvcConfig implements WebMvcConfigurer {
+
+    private final JwtClaimsInterceptor jwtClaimsInterceptor; // injected
+
+    public WebMvcConfig(JwtClaimsInterceptor jwtClaimsInterceptor) {
+        this.jwtClaimsInterceptor = jwtClaimsInterceptor;  // constructor injection
+    }
+}
+```
+
+### Why @Component and not @Bean inside WebMvcConfig?
+`@Component` on the interceptor class means it can be injected anywhere else
+in the application (future use — e.g. a service that needs UserContext).
+If it were a `@Bean` only inside `WebMvcConfig`, it would be more isolated.
+Either works — `@Component` is more reusable.
+
+---
+
+## 4. Interceptor vs Filter vs AOP — know the difference
+
+| | Filter (javax/jakarta) | HandlerInterceptor | Spring AOP |
+|---|---|---|---|
+| Level | Servlet container | Spring MVC | Spring bean |
+| Sees | Raw HTTP request | Mapped handler | Method invocation |
+| Runs for | All requests including static | Only @Controller methods | Only Spring beans |
+| Access to handler | No | Yes | Yes |
+| Use for | Security filter chains, encoding | User context, logging | Transactions, caching |
+
+### In TrueCare Step 4
+`HandlerInterceptor` is the right choice because:
+- We only need context for `@Controller` methods
+- We need access to headers from `HttpServletRequest`
+- We don't need Spring AOP method-level granularity
+- Spring Security's filter chain is overkill since KrakenD handles auth
+
+---
+
+## 5. Logger in Spring Boot — SLF4J + Logback
+
+### What it is
+SLF4J (Simple Logging Facade for Java) is the API.
+Logback is the default implementation in Spring Boot.
+
+```java
+// Declaration
+private static final Logger log = LoggerFactory.getLogger(PatientController.class);
+
+// Usage
+log.info("GET /patients/{} by userId={}", id, userId);
+log.debug("Full detail returned to role={}", role);
+log.warn("Unexpected anonymous access to protected endpoint");
+log.error("Failed to process request", exception);
+```
+
+### Spring Boot auto-configuration of logging
+Spring Boot auto-configures Logback via `spring-boot-starter-logging`
+(included transitively in `spring-boot-starter-web`).
+Default output: coloured console with timestamp, level, thread, logger, message.
+
+### Configure in application.properties
+```properties
+# Set log level for all com.trucare classes
+logging.level.com.trucare=DEBUG
+
+# Set log level for Spring MVC specifically
+logging.level.org.springframework.web=INFO
+
+# Log to file as well as console
+logging.file.name=logs/patient-service.log
+
+# Pattern (rarely needed — defaults are good)
+logging.pattern.console=%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n
+```
+
+### Interview note
+> "Spring Boot's logging auto-configuration uses SLF4J as the API with Logback as
+> the default backend. This is a classic facade pattern — code depends on SLF4J,
+> and the underlying implementation (Logback, Log4j2, JUL) can be swapped by
+> changing dependencies without touching application code.
+> The `private static final Logger` field is the standard idiom — static to avoid
+> creating a new Logger per instance, final to prevent reassignment."
+
+---
+
+## 6. Audit logging pattern — who did what, when
+
+### Why audit logging matters in healthcare
+HIPAA and clinical governance require knowing exactly who accessed patient records.
+`UserContext` in every controller enables this:
+
+```java
+log.info("GET /patients/{} accessed by userId={} role={} at={}",
+    id, ctx.userId(), ctx.role(), Instant.now());
+```
+
+### Production audit log pattern (Structured JSON logging)
+In production, replace plain text logs with structured JSON for easy querying
+in CloudWatch Logs or Elasticsearch:
+
+```json
+{
+  "timestamp": "2024-04-01T10:30:00Z",
+  "level": "INFO",
+  "service": "patient-service",
+  "event": "PATIENT_ACCESSED",
+  "patientId": "P001",
+  "userId": "U001",
+  "userRole": "DOCTOR",
+  "userEmail": "dr.mehta@trucare.com",
+  "endpoint": "GET /patients/P001",
+  "responseStatus": 200,
+  "durationMs": 45
+}
+```
+
+This is achievable by adding `logstash-logback-encoder` to `pom.xml` —
+a Step 7 (EKS deployment) topic.
+
+---
+
+## Common Interview Questions from Step 4
+
+**Q: What is the difference between Spring Security and what you implemented?**
+
+A: Spring Security provides a full authentication and authorisation framework —
+filter chains, user details services, JWT parsing, role-based access. In our
+architecture, KrakenD handles all of this at the gateway level. Spring Boot services
+only read the pre-validated identity that KrakenD forwards as plain HTTP headers.
+This eliminates redundant JWT validation in every service and removes the overhead
+of Spring Security's 9-filter chain from each request.
+
+**Q: How do you pass user identity between microservices without re-validating JWT?**
+
+A: We use claim propagation via KrakenD headers. The gateway validates the JWT once
+at the edge, extracts claims (`sub`, `email`, custom role), and injects them as
+`X-User-*` HTTP headers before forwarding. Backend services read these trusted headers
+via a `HandlerInterceptor` that populates a `UserContext` record in a `ThreadLocal`.
+Services trust these headers because they are only reachable from inside the
+Kubernetes cluster — external callers cannot forge them.
+
+**Q: How do you ensure ThreadLocal doesn't cause cross-request contamination?**
+
+A: The `JwtClaimsInterceptor` calls `UserContextHolder.clear()` in `afterCompletion()`,
+which is guaranteed to run even if an exception occurs. Using `.remove()` rather than
+`.set(null)` fully deallocates the thread-local slot, preventing both data contamination
+and memory leaks in Tomcat's thread pool.
