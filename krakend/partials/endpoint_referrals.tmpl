@@ -1,0 +1,51 @@
+{
+  "endpoint": "/api/v1/referrals",
+  "method": "GET",
+  "output_encoding": "no-op",
+  "extra_config": {
+    {{ template "auth_doctor_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/referrals",
+    "host": ["{{ .hosts.referral_service }}"],
+    "encoding": "no-op"
+  }]
+},
+{
+  "endpoint": "/api/v1/referrals/open",
+  "method": "GET",
+  "output_encoding": "no-op",
+  "extra_config": {
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/referrals/open",
+    "host": ["{{ .hosts.referral_service }}"],
+    "encoding": "no-op"
+  }]
+},
+{
+  "endpoint": "/api/v1/referrals/patient/{patientId}",
+  "method": "GET",
+  "output_encoding": "no-op",
+  "extra_config": {
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/referrals/patient/{patientId}",
+    "host": ["{{ .hosts.referral_service }}"],
+    "encoding": "no-op"
+  }]
+},
+{
+  "endpoint": "/api/v1/referrals/{referralId}",
+  "method": "GET",
+  "extra_config": {
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/referrals/{referralId}",
+    "host": ["{{ .hosts.referral_service }}"],
+    "encoding": "json"
+  }]
+}

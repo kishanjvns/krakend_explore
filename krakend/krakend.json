@@ -6,12 +6,22 @@
   "timeout": "3000ms",
   "cache_ttl": "300s",
 
+  "extra_config": {
+    "router": {
+      "return_error_msg": true
+    }
+  },
+
   "endpoints": [
 
     {
       "endpoint": "/api/v1/patient-summary/{id}",
       "method": "GET",
       "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 200,
+          "capacity": 200
+        },
         "auth/validator": {
           "alg": "RS256",
           "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
@@ -34,15 +44,39 @@
           "url_pattern": "/patients/{id}",
           "host": ["http://patient-service:8081"],
           "encoding": "json",
-          "allow": ["id", "name", "age", "diagnosis", "assignedDoctor", "status", "isActive"]
+          "allow": ["id","name","age","diagnosis","assignedDoctor","status","isActive"],
+          "extra_config": {
+            "qos/ratelimit/proxy": {
+              "max_rate": 20,
+              "capacity": 20,
+              "key": "{{.JWT.sub}}"
+            },
+            "qos/circuit-breaker": {
+              "interval":          60,
+              "timeout":           10,
+              "max_errors":        5,
+              "log_status_change": true
+            }
+          }
         },
         {
           "url_pattern": "/referrals/patient/{id}",
           "host": ["http://referral-service:8082"],
           "encoding": "json",
           "is_collection": true,
-          "mapping": {
-            "collection": "referrals"
+          "mapping": { "collection": "referrals" },
+          "extra_config": {
+            "qos/ratelimit/proxy": {
+              "max_rate": 20,
+              "capacity": 20,
+              "key": "{{.JWT.sub}}"
+            },
+            "qos/circuit-breaker": {
+              "interval":          60,
+              "timeout":           10,
+              "max_errors":        5,
+              "log_status_change": true
+            }
           }
         }
       ]
