@@ -1,0 +1,76 @@
+{
+  "endpoint": "/api/v1/patient-summary/{id}",
+  "method": "GET",
+  "extra_config": {
+    "qos/ratelimit/router": {
+      "max_rate": 200,
+      "capacity": 200
+    },
+    {{ template "auth_doctor_admin.tmpl" . }}
+  },
+  "backend": [
+    {
+      "url_pattern": "/patients/{id}",
+      "host": ["{{ .hosts.patient_service }}"],
+      "encoding": "json",
+      "allow": ["id","name","age","diagnosis","assignedDoctor","status","isActive"],
+      "extra_config": {
+        {{ template "rate_limit_proxy.tmpl" . }},
+        {{ template "circuit_breaker.tmpl" . }}
+      }
+    },
+    {
+      "url_pattern": "/referrals/patient/{id}",
+      "host": ["{{ .hosts.referral_service }}"],
+      "encoding": "json",
+      "is_collection": true,
+      "mapping": { "collection": "referrals" },
+      "extra_config": {
+        {{ template "rate_limit_proxy.tmpl" . }},
+        {{ template "circuit_breaker.tmpl" . }}
+      }
+    }
+  ]
+},
+{
+  "endpoint": "/api/v1/patients",
+  "method": "GET",
+  "output_encoding": "no-op",
+  "backend": [{
+    "url_pattern": "/patients",
+    "host": ["{{ .hosts.patient_service }}"],
+    "encoding": "no-op"
+  }]
+},
+{
+  "endpoint": "/api/v1/patients/status/{status}",
+  "method": "GET",
+  "output_encoding": "no-op",
+  "backend": [{
+    "url_pattern": "/patients/status/{status}",
+    "host": ["{{ .hosts.patient_service }}"],
+    "encoding": "no-op"
+  }]
+},
+{
+  "endpoint": "/api/v1/patients/active",
+  "method": "GET",
+  "output_encoding": "no-op",
+  "backend": [{
+    "url_pattern": "/patients/active",
+    "host": ["{{ .hosts.patient_service }}"],
+    "encoding": "no-op"
+  }]
+},
+{
+  "endpoint": "/api/v1/patients/{id}",
+  "method": "GET",
+  "extra_config": {
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/patients/{id}",
+    "host": ["{{ .hosts.patient_service }}"],
+    "encoding": "json"
+  }]
+}

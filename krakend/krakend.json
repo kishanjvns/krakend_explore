@@ -1,0 +1,278 @@
+{
+  "$schema": "https://www.krakend.io/schema/v2.7/krakend.json",
+  "version": 3,
+  "name": "TrueCare API Gateway — Local Dev with Keycloak",
+  "port": 8080,
+  "timeout": "3000ms",
+  "cache_ttl": "300s",
+
+  "extra_config": {
+    "router": {
+      "return_error_msg": true
+    }
+  },
+
+  "endpoints": [
+
+    {
+      "endpoint": "/api/v1/patient-summary/{id}",
+      "method": "GET",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 200,
+          "capacity": 200
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/trucare",
+          "cache": true,
+          "cache_duration": 900,
+          "disable_jwk_security": true,
+          "roles_key": "role",
+          "roles": ["DOCTOR", "ADMIN"],
+          "propagate_claims": [
+            ["sub",   "X-User-Id"],
+            ["email", "X-User-Email"],
+            ["role",  "X-User-Role"],
+            ["name",  "X-User-Name"]
+          ]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/patients/{id}",
+          "host": ["http://patient-service:8081"],
+          "encoding": "json",
+          "allow": ["id","name","age","diagnosis","assignedDoctor","status","isActive"],
+          "extra_config": {
+            "qos/ratelimit/proxy": {
+              "max_rate": 20,
+              "capacity": 20,
+              "key": "{{.JWT.sub}}"
+            },
+            "qos/circuit-breaker": {
+              "interval":          60,
+              "timeout":           10,
+              "max_errors":        5,
+              "log_status_change": true
+            }
+          }
+        },
+        {
+          "url_pattern": "/referrals/patient/{id}",
+          "host": ["http://referral-service:8082"],
+          "encoding": "json",
+          "is_collection": true,
+          "mapping": { "collection": "referrals" },
+          "extra_config": {
+            "qos/ratelimit/proxy": {
+              "max_rate": 20,
+              "capacity": 20,
+              "key": "{{.JWT.sub}}"
+            },
+            "qos/circuit-breaker": {
+              "interval":          60,
+              "timeout":           10,
+              "max_errors":        5,
+              "log_status_change": true
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/patients",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/patients",
+          "host": ["http://patient-service:8081"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/patients/status/{status}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/patients/status/{status}",
+          "host": ["http://patient-service:8081"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/patients/active",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/patients/active",
+          "host": ["http://patient-service:8081"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/patients/{id}",
+      "method": "GET",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/trucare",
+          "cache": true,
+          "cache_duration": 900,
+          "disable_jwk_security": true,
+          "roles_key": "role",
+          "roles": ["DOCTOR", "NURSE", "ADMIN"],
+          "propagate_claims": [
+            ["sub",   "X-User-Id"],
+            ["email", "X-User-Email"],
+            ["role",  "X-User-Role"],
+            ["name",  "X-User-Name"]
+          ]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/patients/{id}",
+          "host": ["http://patient-service:8081"],
+          "encoding": "json"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/referrals",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/trucare",
+          "cache": true,
+          "cache_duration": 900,
+          "disable_jwk_security": true,
+          "roles_key": "role",
+          "roles": ["DOCTOR", "ADMIN"],
+          "propagate_claims": [
+            ["sub",   "X-User-Id"],
+            ["email", "X-User-Email"],
+            ["role",  "X-User-Role"],
+            ["name",  "X-User-Name"]
+          ]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/referrals",
+          "host": ["http://referral-service:8082"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/referrals/open",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/trucare",
+          "cache": true,
+          "cache_duration": 900,
+          "disable_jwk_security": true,
+          "roles_key": "role",
+          "roles": ["DOCTOR", "NURSE", "ADMIN"],
+          "propagate_claims": [
+            ["sub",   "X-User-Id"],
+            ["email", "X-User-Email"],
+            ["role",  "X-User-Role"],
+            ["name",  "X-User-Name"]
+          ]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/referrals/open",
+          "host": ["http://referral-service:8082"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/referrals/patient/{patientId}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/trucare",
+          "cache": true,
+          "cache_duration": 900,
+          "disable_jwk_security": true,
+          "roles_key": "role",
+          "roles": ["DOCTOR", "NURSE", "ADMIN"],
+          "propagate_claims": [
+            ["sub",   "X-User-Id"],
+            ["email", "X-User-Email"],
+            ["role",  "X-User-Role"],
+            ["name",  "X-User-Name"]
+          ]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/referrals/patient/{patientId}",
+          "host": ["http://referral-service:8082"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/referrals/{referralId}",
+      "method": "GET",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/trucare",
+          "cache": true,
+          "cache_duration": 900,
+          "disable_jwk_security": true,
+          "roles_key": "role",
+          "roles": ["DOCTOR", "NURSE", "ADMIN"],
+          "propagate_claims": [
+            ["sub",   "X-User-Id"],
+            ["email", "X-User-Email"],
+            ["role",  "X-User-Role"],
+            ["name",  "X-User-Name"]
+          ]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/referrals/{referralId}",
+          "host": ["http://referral-service:8082"],
+          "encoding": "json"
+        }
+      ]
+    }
+
+  ]
+}
