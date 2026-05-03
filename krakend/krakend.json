@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.krakend.io/schema/v2.7/krakend.json",
   "version": 3,
-  "name": "TrueCare API Gateway — Local Dev with Keycloak",
+  "name": "Mediq API Gateway — Local Dev with Keycloak",
   "port": 8080,
   "timeout": "3000ms",
   "cache_ttl": "300s",
@@ -24,8 +24,8 @@
         },
         "auth/validator": {
           "alg": "RS256",
-          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
-          "issuer": "http://localhost:8090/realms/trucare",
+          "jwk_url": "http://keycloak:8090/realms/mediq/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/mediq",
           "cache": true,
           "cache_duration": 900,
           "disable_jwk_security": true,
@@ -42,7 +42,7 @@
       "backend": [
         {
           "url_pattern": "/patients/{id}",
-          "host": ["http://patient-service:8081"],
+          "host": ["http://user-service:8081"],
           "encoding": "json",
           "allow": ["id","name","age","diagnosis","assignedDoctor","status","isActive"],
           "extra_config": {
@@ -83,57 +83,44 @@
     },
 
     {
-      "endpoint": "/api/v1/patients",
-      "method": "GET",
+      "endpoint": "/api/v1/users/patients/register",
+      "method": "POST",
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/patients",
-          "host": ["http://patient-service:8081"],
+          "url_pattern": "/users/patients/register",
+          "host": ["http://user-service:8081"],
           "encoding": "no-op"
         }
       ]
     },
 
     {
-      "endpoint": "/api/v1/patients/status/{status}",
-      "method": "GET",
+      "endpoint": "/api/v1/users/doctors/register",
+      "method": "POST",
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/patients/status/{status}",
-          "host": ["http://patient-service:8081"],
+          "url_pattern": "/users/doctors/register",
+          "host": ["http://user-service:8081"],
           "encoding": "no-op"
         }
       ]
     },
 
     {
-      "endpoint": "/api/v1/patients/active",
-      "method": "GET",
-      "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/patients/active",
-          "host": ["http://patient-service:8081"],
-          "encoding": "no-op"
-        }
-      ]
-    },
-
-    {
-      "endpoint": "/api/v1/patients/{id}",
+      "endpoint": "/api/v1/users/{userId}",
       "method": "GET",
       "extra_config": {
         "auth/validator": {
           "alg": "RS256",
-          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
-          "issuer": "http://localhost:8090/realms/trucare",
+          "jwk_url": "http://keycloak:8090/realms/mediq/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/mediq",
           "cache": true,
           "cache_duration": 900,
           "disable_jwk_security": true,
           "roles_key": "role",
-          "roles": ["DOCTOR", "NURSE", "ADMIN"],
+          "roles": ["PATIENT", "DOCTOR", "ADMIN"],
           "propagate_claims": [
             ["sub",   "X-User-Id"],
             ["email", "X-User-Email"],
@@ -144,8 +131,38 @@
       },
       "backend": [
         {
-          "url_pattern": "/patients/{id}",
-          "host": ["http://patient-service:8081"],
+          "url_pattern": "/users/{userId}",
+          "host": ["http://user-service:8081"],
+          "encoding": "json"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/users/doctors/pending-verification",
+      "method": "GET",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8090/realms/mediq/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/mediq",
+          "cache": true,
+          "cache_duration": 900,
+          "disable_jwk_security": true,
+          "roles_key": "role",
+          "roles": ["ADMIN"],
+          "propagate_claims": [
+            ["sub",   "X-User-Id"],
+            ["email", "X-User-Email"],
+            ["role",  "X-User-Role"],
+            ["name",  "X-User-Name"]
+          ]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/users/doctors/pending-verification",
+          "host": ["http://user-service:8081"],
           "encoding": "json"
         }
       ]
@@ -158,8 +175,8 @@
       "extra_config": {
         "auth/validator": {
           "alg": "RS256",
-          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
-          "issuer": "http://localhost:8090/realms/trucare",
+          "jwk_url": "http://keycloak:8090/realms/mediq/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/mediq",
           "cache": true,
           "cache_duration": 900,
           "disable_jwk_security": true,
@@ -189,8 +206,8 @@
       "extra_config": {
         "auth/validator": {
           "alg": "RS256",
-          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
-          "issuer": "http://localhost:8090/realms/trucare",
+          "jwk_url": "http://keycloak:8090/realms/mediq/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/mediq",
           "cache": true,
           "cache_duration": 900,
           "disable_jwk_security": true,
@@ -220,8 +237,8 @@
       "extra_config": {
         "auth/validator": {
           "alg": "RS256",
-          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
-          "issuer": "http://localhost:8090/realms/trucare",
+          "jwk_url": "http://keycloak:8090/realms/mediq/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/mediq",
           "cache": true,
           "cache_duration": 900,
           "disable_jwk_security": true,
@@ -250,8 +267,8 @@
       "extra_config": {
         "auth/validator": {
           "alg": "RS256",
-          "jwk_url": "http://keycloak:8090/realms/trucare/protocol/openid-connect/certs",
-          "issuer": "http://localhost:8090/realms/trucare",
+          "jwk_url": "http://keycloak:8090/realms/mediq/protocol/openid-connect/certs",
+          "issuer": "http://localhost:8090/realms/mediq",
           "cache": true,
           "cache_duration": 900,
           "disable_jwk_security": true,

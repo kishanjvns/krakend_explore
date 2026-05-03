@@ -1,6 +1,4 @@
 {
-  "patient_service":   "http://patient-service:8081",
-  "referral_service":  "http://referral-service:8082",
-  "keycloak_internal": "http://keycloak:8090",
-  "keycloak_external": "http://localhost:8090"
+  "user_service":     ["http://user-service:8081"],
+  "referral_service": ["http://referral-service:8082"]
 }
