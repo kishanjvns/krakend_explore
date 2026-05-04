@@ -1,0 +1,12 @@
+apiVersion: v2
+name: mediq
+description: mediq Healthcare Platform — Practo-like microservices
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - healthcare
+  - microservices
+  - mediq
+maintainers:
+  - name: Kishan Jaiswal

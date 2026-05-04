@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: krakend
+  namespace: mediq
+  labels:
+    app: krakend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: krakend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: krakend
+    spec:
+      containers:
+        - name: krakend
+          image: devopsfaith/krakend:2.7
+          args: ["run", "--config", "/etc/krakend/krakend.json"]
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: krakend-config
+              mountPath: /etc/krakend
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /__health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: krakend-config
+          configMap:
+            name: krakend-config
