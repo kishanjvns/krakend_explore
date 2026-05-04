@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: appointment-service-config
+  namespace: mediq
+data:
+  DB_URL: "jdbc:postgresql://postgres-service:5432/mediq_appointments"
+  DB_USERNAME: "mediq"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-service:9092"
+  JAEGER_ENDPOINT: "http://jaeger-service:4318/v1/traces"
+  ENVIRONMENT: "kubernetes"

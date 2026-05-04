@@ -1,0 +1,25 @@
+# Development overrides — smaller replicas to save local resources
+global:
+  imageTag: latest
+  environment: dev
+
+userService:
+  replicas: 1
+  hpa:
+    minReplicas: 1
+    maxReplicas: 3
+
+doctorService:
+  replicas: 1
+
+appointmentService:
+  replicas: 1
+
+notificationService:
+  replicas: 1
+
+krakend:
+  replicas: 1
+
+jaeger:
+  enabled: true
