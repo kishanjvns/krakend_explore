@@ -1,0 +1,124 @@
+{
+  "endpoint": "/api/v1/appointments",
+  "method": "POST",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 100, "capacity": 100 },
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/appointments",
+    "host": ["{{ .hosts.appointment_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/appointments/{appointmentId}",
+  "method": "GET",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/appointments/{appointmentId}",
+    "host": ["{{ .hosts.appointment_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/appointments/{appointmentId}/confirm",
+  "method": "PUT",
+  "extra_config": {
+    {{ template "auth_doctor_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/appointments/{appointmentId}/confirm",
+    "host": ["{{ .hosts.appointment_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/appointments/{appointmentId}/cancel",
+  "method": "PUT",
+  "extra_config": {
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/appointments/{appointmentId}/cancel",
+    "host": ["{{ .hosts.appointment_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/slots",
+  "method": "POST",
+  "extra_config": {
+    {{ template "auth_doctor_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/slots",
+    "host": ["{{ .hosts.appointment_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/web/patient-overview/{patientId}",
+  "method": "GET",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 100, "capacity": 100 },
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [
+    {
+      "url_pattern": "/users/{patientId}",
+      "host": ["{{ .hosts.user_service }}"],
+      "encoding": "json",
+      "allow": ["id", "email", "fullName", "role", "active"],
+      "mapping": { "id": "patientId" },
+      "extra_config": {
+        {{ template "rate_limit_proxy.tmpl" . }},
+        {{ template "circuit_breaker.tmpl" . }}
+      }
+    },
+    {
+      "url_pattern": "/emr/patients/{patientId}/current",
+      "host": ["{{ .hosts.emr_service }}"],
+      "encoding": "json",
+      "mapping": { "patientId": "emrPatientId" },
+      "extra_config": {
+        {{ template "rate_limit_proxy.tmpl" . }},
+        {{ template "circuit_breaker.tmpl" . }}
+      }
+    },
+    {
+      "url_pattern": "/appointments?patientId={patientId}",
+      "host": ["{{ .hosts.appointment_service }}"],
+      "encoding": "json",
+      "is_collection": true,
+      "mapping": { "collection": "appointments" },
+      "extra_config": {
+        {{ template "rate_limit_proxy.tmpl" . }},
+        {{ template "circuit_breaker.tmpl" . }}
+      }
+    }
+  ]
+}

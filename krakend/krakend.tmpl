@@ -14,6 +14,8 @@
 
   "endpoints": [
     {{ template "endpoint_patients.tmpl" . }},
-    {{ template "endpoint_referrals.tmpl" . }}
+    {{ template "endpoint_referrals.tmpl" . }},
+    {{ template "endpoint_doctors.tmpl" . }},
+    {{ template "endpoint_appointments.tmpl" . }}
   ]
 }
