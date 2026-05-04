@@ -1,0 +1,102 @@
+{
+  "realm": "mediq",
+  "enabled": true,
+  "displayName": "Mediq Healthcare",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 3600,
+  "defaultSignatureAlgorithm": "RS256",
+
+  "roles": {
+    "realm": [
+      { "name": "DOCTOR",  "description": "Clinical doctor with full patient access" },
+      { "name": "NURSE",   "description": "Nursing staff with limited access" },
+      { "name": "ADMIN",   "description": "System administrator" },
+      { "name": "PATIENT", "description": "Patient self-service access" }
+    ]
+  },
+
+  "clients": [
+    {
+      "clientId": "mediq-gateway",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "mediq-secret-local",
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "protocol": "openid-connect",
+      "redirectUris": ["http://localhost:8080/*"],
+      "webOrigins": ["http://localhost:8080"],
+      "defaultClientScopes": ["openid", "profile", "email", "roles"],
+      "protocolMappers": [
+        {
+          "name": "realm-roles-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "false",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "role",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "dr.mehta",
+      "email": "dr.mehta@mediq.com",
+      "firstName": "Raj",
+      "lastName": "Mehta",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "doctor123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["DOCTOR"]
+    },
+    {
+      "username": "nurse.priya",
+      "email": "priya@mediq.com",
+      "firstName": "Priya",
+      "lastName": "Verma",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "nurse123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["NURSE"]
+    },
+    {
+      "username": "admin",
+      "email": "admin@mediq.com",
+      "firstName": "System",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["ADMIN"]
+    }
+  ]
+}
