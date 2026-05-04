@@ -1,4 +1,6 @@
 {
-  "user_service":     ["http://user-service:8081"],
-  "referral_service": ["http://referral-service:8082"]
+  "user_service":         ["http://user-service:8081"],
+  "referral_service":     ["http://referral-service:8082"],
+  "doctor_service":       ["http://doctor-service:8083"],
+  "appointment_service":  ["http://appointment-service:8084"]
 }

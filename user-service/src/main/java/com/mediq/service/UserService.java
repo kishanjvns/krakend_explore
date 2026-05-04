@@ -1,11 +1,13 @@
 package com.mediq.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mediq.dto.*;
 import com.mediq.event.UserEvent;
-import com.mediq.event.UserEventPublisher;
 import com.mediq.exception.UserNotFoundException;
 import com.mediq.model.*;
 import com.mediq.repository.DoctorProfileRepository;
+import com.mediq.repository.UserOutboxRepository;
 import com.mediq.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,20 +25,23 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final DoctorProfileRepository doctorProfileRepository;
-    private final UserEventPublisher eventPublisher;
+    private final UserOutboxRepository outboxRepository;
     private final UserCacheService cacheService;
     private final UserMapper userMapper;
+    private final ObjectMapper objectMapper;
 
     public UserService(UserRepository userRepository,
                        DoctorProfileRepository doctorProfileRepository,
-                       UserEventPublisher eventPublisher,
+                       UserOutboxRepository outboxRepository,
                        UserCacheService cacheService,
-                       UserMapper userMapper) {
+                       UserMapper userMapper,
+                       ObjectMapper objectMapper) {
         this.userRepository = userRepository;
         this.doctorProfileRepository = doctorProfileRepository;
-        this.eventPublisher = eventPublisher;
+        this.outboxRepository = outboxRepository;
         this.cacheService = cacheService;
         this.userMapper = userMapper;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -47,7 +52,7 @@ public class UserService {
         userRepository.save(user);
 
         UserEvent event = buildEvent("USER_REGISTERED", user, request.contacts());
-        eventPublisher.publish(event);
+        saveToOutbox(event);
 
         log.info("Patient registered: userId={}", user.getId());
         return userMapper.toResponse(user);
@@ -69,7 +74,7 @@ public class UserService {
         doctorProfileRepository.save(profile);
 
         UserEvent event = buildEvent("USER_REGISTERED", user, request.contacts());
-        eventPublisher.publish(event);
+        saveToOutbox(event);
 
         log.info("Doctor registered (PENDING verification): userId={}", user.getId());
         return userMapper.toResponse(user);
@@ -104,7 +109,7 @@ public class UserService {
             user.getContacts().stream()
                 .map(c -> new ContactRequest(c.getContactType(), c.getContactValue(), c.isPrimary()))
                 .toList());
-        eventPublisher.publish(event);
+        saveToOutbox(event);
 
         return userMapper.toResponse(user);
     }
@@ -137,7 +142,7 @@ public class UserService {
             user.getContacts().stream()
                 .map(c -> new ContactRequest(c.getContactType(), c.getContactValue(), c.isPrimary()))
                 .toList());
-        eventPublisher.publish(event);
+        saveToOutbox(event);
 
         return userMapper.toResponse(user);
     }
@@ -149,6 +154,18 @@ public class UserService {
             .stream()
             .map(p -> userMapper.toResponse(p.getUser()))
             .toList();
+    }
+
+    private void saveToOutbox(UserEvent event) {
+        try {
+            UserOutboxEntity outbox = new UserOutboxEntity();
+            outbox.setAggregateId(event.userId());
+            outbox.setEventType(event.eventType());
+            outbox.setPayload(objectMapper.writeValueAsString(event));
+            outboxRepository.save(outbox);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize event for outbox: " + e.getMessage(), e);
+        }
     }
 
     private UserEvent buildEvent(String eventType, UserEntity user,

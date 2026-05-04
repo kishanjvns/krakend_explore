@@ -25,6 +25,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./scripts/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - mediq-net
     healthcheck:
@@ -172,6 +173,97 @@ services:
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
              "http://localhost:8081/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  # ── doctor-service ───────────────────────────────────────────────────────────
+  doctor-service:
+    build:
+      context: ./doctor-service
+      dockerfile: Dockerfile
+    container_name: mediq-doctor-service
+    ports:
+      - "8083:8083"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/mediq_doctors
+      DB_USERNAME: mediq
+      DB_PASSWORD: mediq
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JAEGER_ENDPOINT: http://jaeger:4318/v1/traces
+    networks:
+      - mediq-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8083/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  # ── appointment-service ──────────────────────────────────────────────────────
+  appointment-service:
+    build:
+      context: ./appointment-service
+      dockerfile: Dockerfile
+    container_name: mediq-appointment-service
+    ports:
+      - "8084:8084"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/mediq_appointments
+      DB_USERNAME: mediq
+      DB_PASSWORD: mediq
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAEGER_ENDPOINT: http://jaeger:4318/v1/traces
+    networks:
+      - mediq-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8084/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  # ── notification-service ─────────────────────────────────────────────────────
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: mediq-notification-service
+    ports:
+      - "8085:8085"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/mediq_notifications
+      DB_USERNAME: mediq
+      DB_PASSWORD: mediq
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAEGER_ENDPOINT: http://jaeger:4318/v1/traces
+    networks:
+      - mediq-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8085/actuator/health"]
       interval: 20s
       timeout: 5s
       retries: 5
