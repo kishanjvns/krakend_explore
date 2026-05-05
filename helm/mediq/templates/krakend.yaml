@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: krakend
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "mediq.labels" (merge (dict "name" "krakend") .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.krakend.replicas }}
+  selector:
+    matchLabels:
+      app: krakend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: krakend
+    spec:
+      containers:
+        - name: krakend
+          image: {{ .Values.krakend.image }}
+          args: ["run", "--config", "/etc/krakend/krakend.json"]
+          ports:
+            - containerPort: {{ .Values.krakend.port }}
+          readinessProbe:
+            httpGet:
+              path: /__health
+              port: {{ .Values.krakend.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: krakend-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: NodePort
+  selector:
+    app: krakend
+  ports:
+    - port: {{ .Values.krakend.port }}
+      targetPort: {{ .Values.krakend.port }}
+      nodePort: 30080

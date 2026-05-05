@@ -15,6 +15,7 @@
       "Bash(git -C /d/codebase/krakend_explore status --short)",
       "Bash(git checkout *)",
       "Bash(git add *)",
+
       "Bash(git commit -m ' *)",
       "Bash(git -C D:/codebase/krakend_explore checkout feature/mediq-m4-advanced)",
       "Bash(git -C D:/codebase/krakend_explore checkout -b fix/distributed-tracing)",

@@ -1,0 +1,20 @@
+# KEDA scales notification-service based on Kafka consumer lag — NOT CPU
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: notification-service-scaler
+  namespace: mediq
+spec:
+  scaleTargetRef:
+    name: notification-service
+  minReplicaCount: 1
+  maxReplicaCount: 8
+  cooldownPeriod: 30
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: kafka-service:9092
+        consumerGroup: mediq-notification-appointment-group
+        topic: mediq.appointment.events
+        lagThreshold: "100"
+        offsetResetPolicy: latest

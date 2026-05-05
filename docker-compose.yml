@@ -1,0 +1,434 @@
+version: "3.9"
+
+networks:
+  mediq-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  kafka-data:
+  keycloak-data:
+  krakend-data:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+
+services:
+
+  # ── PostgreSQL ───────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: mediq-postgres
+    environment:
+      POSTGRES_USER: mediq
+      POSTGRES_PASSWORD: mediq
+      POSTGRES_DB: mediq_users
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mediq-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mediq -d mediq_users"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: mediq-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - mediq-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ── Zookeeper (required by Kafka) ────────────────────────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: mediq-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - mediq-net
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Kafka ────────────────────────────────────────────────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: mediq-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - mediq-net
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ── Keycloak ─────────────────────────────────────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.3
+    container_name: mediq-keycloak
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8090
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "8090:8090"
+    volumes:
+      - keycloak-data:/keycloak/realm:/opt/keycloak/data/import
+    networks:
+      - mediq-net
+    healthcheck:
+      test: ["CMD", "/bin/bash", "-c",
+             "exec 3<>/dev/tcp/localhost/8090 && printf 'GET /realms/mediq HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && timeout 3 cat <&3 | head -1 | grep -q '200'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  # ── Jaeger — distributed tracing UI ─────────────────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: mediq-jaeger
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks:
+      - mediq-net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:16686/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── user-service ─────────────────────────────────────────────────────────────
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: mediq-user-service
+    ports:
+      - "8081:8081"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/mediq_users
+      DB_USERNAME: mediq
+      DB_PASSWORD: mediq
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KEYCLOAK_ADMIN_URL: http://keycloak:8090
+      KEYCLOAK_ADMIN_SECRET: admin
+      JAEGER_ENDPOINT: http://jaeger:4318/v1/traces
+    networks:
+      - mediq-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      jaeger:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8081/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  # ── doctor-service ───────────────────────────────────────────────────────────
+  doctor-service:
+    build:
+      context: ./doctor-service
+      dockerfile: Dockerfile
+    container_name: mediq-doctor-service
+    ports:
+      - "8083:8083"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/mediq_doctors
+      DB_USERNAME: mediq
+      DB_PASSWORD: mediq
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JAEGER_ENDPOINT: http://jaeger:4318/v1/traces
+    networks:
+      - mediq-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8083/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  # ── appointment-service ──────────────────────────────────────────────────────
+  appointment-service:
+    build:
+      context: ./appointment-service
+      dockerfile: Dockerfile
+    container_name: mediq-appointment-service
+    ports:
+      - "8084:8084"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/mediq_appointments
+      DB_USERNAME: mediq
+      DB_PASSWORD: mediq
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAEGER_ENDPOINT: http://jaeger:4318/v1/traces
+    networks:
+      - mediq-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8084/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  # ── notification-service ─────────────────────────────────────────────────────
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: mediq-notification-service
+    ports:
+      - "8085:8085"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/mediq_notifications
+      DB_USERNAME: mediq
+      DB_PASSWORD: mediq
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAEGER_ENDPOINT: http://jaeger:4318/v1/traces
+    networks:
+      - mediq-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8085/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  # ── referral-service ─────────────────────────────────────────────────────────
+  referral-service:
+    build:
+      context: ./referral-service
+      dockerfile: Dockerfile
+    container_name: mediq-referral-service
+    ports:
+      - "8082:8082"
+    networks:
+      - mediq-net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8082/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
+  # ── emr-service ──────────────────────────────────────────────────────────────
+  emr-service:
+    build:
+      context: ./emr-service
+      dockerfile: Dockerfile
+    container_name: mediq-emr-service
+    ports:
+      - "8086:8086"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/mediq_emr
+      DB_USERNAME: mediq
+      DB_PASSWORD: mediq
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAEGER_ENDPOINT: http://jaeger:4318/v1/traces
+    networks:
+      - mediq-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8086/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  # ── analytics-service ────────────────────────────────────────────────────────
+  analytics-service:
+    build:
+      context: ./analytics-service
+      dockerfile: Dockerfile
+    container_name: mediq-analytics-service
+    ports:
+      - "8087:8087"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/mediq_analytics
+      DB_USERNAME: mediq
+      DB_PASSWORD: mediq
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAEGER_ENDPOINT: http://jaeger:4318/v1/traces
+    networks:
+      - mediq-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8087/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  # ── Prometheus ───────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: mediq-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    networks:
+      - mediq-net
+
+  # ── Grafana ──────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: mediq-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: mediq
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./observability/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    networks:
+      - mediq-net
+    depends_on:
+      - prometheus
+
+  # ── Loki ─────────────────────────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:2.9.6
+    container_name: mediq-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - mediq-net
+
+  # ── Promtail ─────────────────────────────────────────────────────────────────
+  promtail:
+    image: grafana/promtail:2.9.6
+    container_name: mediq-promtail
+    volumes:
+      - ./observability/promtail.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - mediq-net
+    depends_on:
+      - loki
+
+  # ── KrakenD ──────────────────────────────────────────────────────────────────
+  krakend:
+    image: devopsfaith/krakend:2.7
+    container_name: mediq-krakend
+    ports:
+      - "8080:8080"
+    volumes:
+      - krakend-data:/krakend:/etc/krakend
+    environment:
+      FC_ENABLE: "1"
+      FC_TEMPLATES: "/etc/krakend/partials"
+      FC_SETTINGS: "/etc/krakend/settings"
+    command: ["run", "--config", "/etc/krakend/krakend.tmpl", "--debug"]
+    networks:
+      - mediq-net
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy

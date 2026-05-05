@@ -1,0 +1,78 @@
+global:
+  namespace: mediq
+  imageRegistry: mediq
+  imageTag: latest
+  imagePullPolicy: IfNotPresent
+  environment: dev
+
+postgres:
+  image: postgres:16-alpine
+  database: mediq_users
+  username: mediq
+  password: mediq
+  storage: 10Gi
+
+redis:
+  image: redis:7-alpine
+
+kafka:
+  image: confluentinc/cp-kafka:7.6.0
+  zookeeperImage: confluentinc/cp-zookeeper:7.6.0
+
+keycloak:
+  image: quay.io/keycloak/keycloak:24.0.3
+  adminPassword: admin
+
+userService:
+  replicas: 2
+  port: 8081
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+      cpu: 1000m
+  hpa:
+    minReplicas: 2
+    maxReplicas: 8
+    cpuThreshold: 70
+
+doctorService:
+  replicas: 2
+  port: 8083
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+      cpu: 1000m
+
+appointmentService:
+  replicas: 2
+  port: 8084
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+      cpu: 1000m
+
+notificationService:
+  replicas: 1
+  port: 8085
+  keda:
+    minReplicas: 1
+    maxReplicas: 8
+    lagThreshold: 100
+
+krakend:
+  image: devopsfaith/krakend:2.7
+  replicas: 2
+  port: 8080
+
+jaeger:
+  image: jaegertracing/all-in-one:1.57
+  enabled: true

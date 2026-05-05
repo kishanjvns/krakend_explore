@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>OAuth2 Authorization Code + PKCE Flow — TrueCare</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --color-background-primary: #ffffff;
+    --color-background-secondary: #f5f4f0;
+    --color-background-tertiary: #eeede8;
+    --color-text-primary: #1a1a18;
+    --color-text-secondary: #5f5e5a;
+    --color-text-tertiary: #888780;
+    --color-border-tertiary: rgba(0,0,0,0.12);
+    --color-border-secondary: rgba(0,0,0,0.22);
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-background-primary: #1e1e1c;
+      --color-background-secondary: #2a2a28;
+      --color-background-tertiary: #333331;
+      --color-text-primary: #e8e6de;
+      --color-text-secondary: #9c9a92;
+      --color-text-tertiary: #6e6c66;
+      --color-border-tertiary: rgba(255,255,255,0.10);
+      --color-border-secondary: rgba(255,255,255,0.18);
+    }
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-background-tertiary);
+    color: var(--color-text-primary);
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  .page-title {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: var(--color-text-primary);
+  }
+
+  .page-sub {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    margin-bottom: 20px;
+  }
+
+  .wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    background: var(--color-background-primary);
+    border-radius: var(--border-radius-lg);
+    border: 0.5px solid var(--color-border-tertiary);
+    padding: 20px;
+  }
+
+  .step-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .pill {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    border: 0.5px solid var(--color-border-secondary);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all .2s;
+    background: var(--color-background-primary);
+  }
+  .pill:hover { background: var(--color-background-secondary); }
+  .pill.active { background: #534AB7; border-color: #534AB7; color: #fff; }
+  .pill.done   { background: #1D9E75; border-color: #1D9E75; color: #fff; }
+
+  .stage {
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-lg);
+    border: 0.5px solid var(--color-border-tertiary);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+
+  .stage-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    margin-bottom: 12px;
+  }
+
+  .actors { display: flex; gap: 0; margin-bottom: 12px; }
+  .actor  { flex: 1; text-align: center; padding: 8px 4px; }
+  .actor-badge {
+    display: inline-block;
+    padding: 5px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    width: 100%;
+    max-width: 100px;
+  }
+  .actor-label { font-size: 10px; color: var(--color-text-tertiary); }
+
+  .flow-area {
+    position: relative;
+    min-height: 180px;
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: 8px;
+    background: var(--color-background-primary);
+    padding: 12px 8px;
+    overflow: hidden;
+  }
+
+  .msg-row {
+    display: flex;
+    align-items: center;
+    margin: 8px 0;
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity .4s, transform .4s;
+  }
+  .msg-row.show { opacity: 1; transform: translateX(0); }
+  .msg-row.d1 { transition-delay: .10s; }
+  .msg-row.d2 { transition-delay: .25s; }
+  .msg-row.d3 { transition-delay: .40s; }
+  .msg-row.d4 { transition-delay: .55s; }
+  .msg-row.d5 { transition-delay: .70s; }
+
+  .msg-line { flex: 1; height: 1.5px; position: relative; }
+  .msg-line::after {
+    content: '';
+    position: absolute;
+    right: -5px;
+    top: -4px;
+    border: 4px solid transparent;
+  }
+  .arrow-r::after { border-left-color: currentColor; }
+  .arrow-l::after { border-right-color: currentColor; left: -5px; right: auto; }
+
+  .msg-badge {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  .detail-card {
+    border-radius: 8px;
+    border: 0.5px solid var(--color-border-secondary);
+    padding: 12px 14px;
+    margin-top: 12px;
+    background: var(--color-background-primary);
+  }
+  .detail-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .code-block {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-text-primary);
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .key  { color: #185FA5; }
+  .val  { color: #0F6E56; }
+  .warn { color: #BA7517; }
+
+  .insight {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-left: 2px solid #7F77DD;
+    background: var(--color-background-secondary);
+    border-radius: 0 6px 6px 0;
+  }
+
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+  }
+  .nav button {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: 0.5px solid var(--color-border-secondary);
+    background: var(--color-background-primary);
+    color: var(--color-text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: background .15s;
+  }
+  .nav button:hover  { background: var(--color-background-secondary); }
+  .nav button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .step-counter { font-size: 12px; color: var(--color-text-secondary); }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    background: var(--color-background-secondary);
+    border-radius: 8px;
+    border: 0.5px solid var(--color-border-tertiary);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<div style="max-width:860px;margin:0 auto 12px;">
+  <div class="page-title">OAuth2 Authorization Code + PKCE Flow</div>
+  <div class="page-sub">TrueCare — Step-by-step interactive walkthrough &nbsp;·&nbsp; Dr. Mehta logs in via Angular</div>
+</div>
+
+<div class="wrap">
+
+  <div class="legend" id="legend"></div>
+  <div class="step-pills" id="pills"></div>
+
+  <div class="stage">
+    <div class="stage-title" id="stage-title"></div>
+    <div class="actors" id="actors-bar"></div>
+    <div class="flow-area" id="flow-area"></div>
+    <div class="detail-card" id="detail-card"></div>
+  </div>
+
+  <div class="nav">
+    <button id="prev-btn" onclick="go(-1)">← Prev</button>
+    <span class="step-counter" id="step-counter"></span>
+    <button id="next-btn" onclick="go(1)">Next →</button>
+  </div>
+
+</div>
+
+<script>
+const ACTORS = [
+  { id:'mehta',    label:'Dr. Mehta',    sub:'Resource Owner',      bg:'#EEEDFE', fg:'#3C3489' },
+  { id:'angular',  label:'Angular',      sub:'Client',              bg:'#E1F5EE', fg:'#085041' },
+  { id:'keycloak', label:'Keycloak',     sub:'Auth Server',         bg:'#FAEEDA', fg:'#633806' },
+  { id:'krakend',  label:'KrakenD',      sub:'Resource Server',     bg:'#FAECE7', fg:'#712B13' },
+  { id:'patient',  label:'patient-svc',  sub:'Protected Resource',  bg:'#F1EFE8', fg:'#444441' }
+];
+
+const STEPS = [
+  {
+    title: 'Step 1 — Login clicked, PKCE values generated',
+    msgs: [
+      { from:'mehta',   to:'angular',  dir:'r', label:'clicks Login',                                      color:'#534AB7', d:0 },
+      { from:'angular', to:'angular',  dir:'r', label:'generates code_verifier + code_challenge in memory',color:'#1D9E75', d:1 },
+      { from:'angular', to:'keycloak', dir:'r', label:'redirect → /auth?code_challenge=…&response_type=code', color:'#BA7517', d:2 }
+    ],
+    detail:`<span class="key">code_verifier</span>  = <span class="val">"xK9mP2qL7rN4sT1vY8wZ3uA"</span>  <span class="warn">← random, stays in memory only</span>
+<span class="key">code_challenge</span> = <span class="val">BASE64URL(SHA256(code_verifier))</span>  <span class="warn">← one-way, sent to Keycloak</span>
+
+Redirect URL built by Angular:
+  <span class="key">response_type</span>=<span class="val">code</span>
+  <span class="key">client_id</span>=<span class="val">trucare-angular</span>
+  <span class="key">redirect_uri</span>=<span class="val">http://localhost:4200/callback</span>
+  <span class="key">scope</span>=<span class="val">openid profile email</span>
+  <span class="key">state</span>=<span class="val">csrf-random-token</span>       <span class="warn">← CSRF protection</span>
+  <span class="key">code_challenge</span>=<span class="val">E9Melhoa2OwvFrEMT…</span>
+  <span class="key">code_challenge_method</span>=<span class="val">S256</span>`,
+    insight: 'Angular NEVER sends its password to Dr. Mehta or handles his credentials. It only opens Keycloak\'s login page with the code_challenge attached.'
+  },
+  {
+    title: 'Step 2 — Dr. Mehta authenticates on Keycloak',
+    msgs: [
+      { from:'keycloak', to:'mehta',    dir:'l', label:'serves login page',                        color:'#BA7517', d:0 },
+      { from:'mehta',    to:'keycloak', dir:'r', label:'enters dr.mehta / doctor123',              color:'#534AB7', d:1 },
+      { from:'keycloak', to:'keycloak', dir:'r', label:'validates credentials, stores code_challenge', color:'#1D9E75', d:2 }
+    ],
+    detail:`Keycloak stores internally:
+  <span class="key">code_challenge</span> = <span class="val">E9Melhoa2OwvFrEMT…</span>  <span class="warn">← will compare in Step 4</span>
+  <span class="key">redirect_uri</span>   = <span class="val">http://localhost:4200/callback</span>
+  <span class="key">scope</span>          = <span class="val">openid profile email</span>
+  <span class="key">session</span>        = <span class="val">ea1eb5e8-d8d9-4946…</span>
+
+Dr. Mehta's credentials go ONLY to Keycloak.
+Angular never sees username or password — ever.`,
+    insight: 'This is the key security advantage over password grant. Dr. Mehta types directly on Keycloak\'s page. If Angular is compromised, no credentials are exposed.'
+  },
+  {
+    title: 'Step 3 — Keycloak issues authorization code',
+    msgs: [
+      { from:'keycloak', to:'angular', dir:'l', label:'redirect → /callback?code=SplxlOBeZQ…&state=csrf-token', color:'#BA7517', d:0 },
+      { from:'angular',  to:'angular', dir:'r', label:'validates state matches sent value, extracts code',       color:'#1D9E75', d:1 }
+    ],
+    detail:`Callback URL Angular receives:
+  <span class="key">code</span>  = <span class="val">SplxlOBeZQQYbYS6WxSbIA</span>  <span class="warn">← short-lived (~60s), one-time use only</span>
+  <span class="key">state</span> = <span class="val">csrf-random-token</span>       <span class="warn">← Angular checks: matches what I sent? ✅</span>
+
+This code travels in the browser URL bar — visible in history.
+This is safe because it is useless without code_verifier.
+An attacker who steals just the code cannot exchange it.`,
+    insight: 'The authorization code is NOT a token. It is a temporary voucher that expires in ~60 seconds and can only be used once. Code alone = worthless without code_verifier.'
+  },
+  {
+    title: 'Step 4 — Angular exchanges code for tokens',
+    msgs: [
+      { from:'angular',  to:'keycloak', dir:'r', label:'POST /token  code + code_verifier (no client_secret!)', color:'#1D9E75', d:0 },
+      { from:'keycloak', to:'keycloak', dir:'r', label:'SHA256(code_verifier) == stored code_challenge ✅',      color:'#BA7517', d:1 },
+      { from:'keycloak', to:'angular',  dir:'l', label:'access_token + refresh_token + id_token',               color:'#1D9E75', d:2 }
+    ],
+    detail:`POST /realms/trucare/protocol/openid-connect/token
+  <span class="key">grant_type</span>    = <span class="val">authorization_code</span>
+  <span class="key">code</span>          = <span class="val">SplxlOBeZQQYbYS6WxSbIA</span>
+  <span class="key">redirect_uri</span>  = <span class="val">http://localhost:4200/callback</span>
+  <span class="key">client_id</span>     = <span class="val">trucare-angular</span>
+  <span class="key">code_verifier</span> = <span class="val">xK9mP2qL7rN4sT1vY8wZ3uA</span>  <span class="warn">← replaces client_secret for public clients</span>
+
+Keycloak checks: SHA256(<span class="val">"xK9mP2…"</span>) == <span class="val">E9Melhoa2…</span> ✅
+Response tokens:
+  <span class="key">access_token</span>  <span class="warn">← KrakenD validates this</span>
+  <span class="key">refresh_token</span> <span class="warn">← Angular uses to renew access_token silently</span>
+  <span class="key">id_token</span>      <span class="warn">← Angular uses to know WHO Dr. Mehta is (OIDC)</span>`,
+    insight: 'code_verifier is used exactly once then discarded. Next login generates a brand new random pair. Even if someone intercepted this POST, the verifier is already burned.'
+  },
+  {
+    title: 'Step 5 — Angular calls KrakenD with access_token',
+    msgs: [
+      { from:'angular',  to:'krakend',  dir:'r', label:'GET /api/v1/patients/P001  Authorization: Bearer …',  color:'#D85A30', d:0 },
+      { from:'krakend',  to:'keycloak', dir:'r', label:'fetch JWKS public keys (cached 15 min)',              color:'#BA7517', d:1 },
+      { from:'keycloak', to:'krakend',  dir:'l', label:'RS256 public keys ✅',                                color:'#BA7517', d:2 },
+      { from:'krakend',  to:'krakend',  dir:'r', label:'verify sig ✅  expiry ✅  iss ✅  role=DOCTOR ✅',    color:'#1D9E75', d:3 }
+    ],
+    detail:`KrakenD validates JWT claims:
+  <span class="key">alg</span>   = <span class="val">RS256</span>                                ✅ matches config
+  <span class="key">exp</span>   = <span class="val">future timestamp</span>                     ✅ not expired
+  <span class="key">iss</span>   = <span class="val">http://localhost:8090/realms/trucare</span>  ✅ matches issuer field
+  <span class="key">role</span>  = <span class="val">DOCTOR</span>                               ✅ in allowed roles
+
+Then KrakenD:
+  Strips raw JWT from request             <span class="warn">← token never reaches backend</span>
+  Injects claim headers:
+    <span class="key">X-User-Id</span>    = <span class="val">eaa02e71-11a7-4104-8030…</span>
+    <span class="key">X-User-Email</span> = <span class="val">dr.mehta@trucare.com</span>
+    <span class="key">X-User-Role</span>  = <span class="val">DOCTOR</span>
+    <span class="key">X-User-Name</span>  = <span class="val">Raj Mehta</span>`,
+    insight: 'KrakenD is the ONLY layer that sees the raw JWT. patient-service only receives plain headers. This is claim propagation — identity forwarded without the secret.'
+  },
+  {
+    title: 'Step 6 — patient-service responds, data flows back',
+    msgs: [
+      { from:'krakend', to:'patient',  dir:'r', label:'GET /patients/P001  X-User-Id + X-User-Role (no JWT)', color:'#5F5E5A', d:0 },
+      { from:'patient', to:'patient',  dir:'r', label:'JwtClaimsInterceptor → UserContext{userId, DOCTOR}',   color:'#1D9E75', d:1 },
+      { from:'patient', to:'krakend',  dir:'l', label:'200 OK  { id: P001, name: Arun Sharma, … }',          color:'#5F5E5A', d:2 },
+      { from:'krakend', to:'angular',  dir:'l', label:'200 OK  patient JSON (merged if aggregation)',         color:'#D85A30', d:3 },
+      { from:'angular', to:'mehta',    dir:'l', label:'renders patient record in UI',                        color:'#534AB7', d:4 }
+    ],
+    detail:`patient-service Spring Boot log:
+  <span class="key">INFO</span>  PatientController - GET /patients/P001
+         accessed by <span class="key">userId</span>=<span class="val">eaa02e71…</span>  <span class="key">role</span>=<span class="val">DOCTOR</span>
+
+No JWT validation inside patient-service.
+No Spring Security filter chain overhead.
+One lightweight HandlerInterceptor reads trusted headers.
+
+Dr. Mehta's browser receives:
+  { <span class="key">"id"</span>: <span class="val">"P001"</span>, <span class="key">"name"</span>: <span class="val">"Arun Sharma"</span>,
+    <span class="key">"diagnosis"</span>: <span class="val">"Hypertension"</span>, <span class="key">"status"</span>: <span class="val">"admitted"</span> }`,
+    insight: 'Full round trip complete. One click by Dr. Mehta → PKCE handshake → authorization code → token exchange → gateway validation → service response. Zero raw credentials ever left Keycloak.'
+  }
+];
+
+let cur = 0;
+
+function renderLegend() {
+  document.getElementById('legend').innerHTML = ACTORS.map(a =>
+    `<div class="legend-item">
+       <div class="legend-dot" style="background:${a.bg};border:1px solid ${a.fg}44"></div>
+       <span><strong style="color:var(--color-text-primary)">${a.label}</strong> — ${a.sub}</span>
+     </div>`
+  ).join('');
+}
+
+function renderPills() {
+  document.getElementById('pills').innerHTML = STEPS.map((s,i) =>
+    `<span class="pill ${i===cur?'active':i<cur?'done':''}" onclick="jumpTo(${i})">Step ${i+1}</span>`
+  ).join('');
+}
+
+function jumpTo(i) { cur = i; render(); }
+
+function renderActors() {
+  document.getElementById('actors-bar').innerHTML = ACTORS.map(a =>
+    `<div class="actor">
+       <div class="actor-badge" style="background:${a.bg};color:${a.fg}">${a.label}</div>
+       <div class="actor-label">${a.sub}</div>
+     </div>`
+  ).join('');
+}
+
+function renderFlow(msgs) {
+  const fa = document.getElementById('flow-area');
+  const cols = ACTORS.length;
+  const colW = 100 / cols;
+  let html = ACTORS.map((_,i) =>
+    `<div style="position:absolute;left:${(i/cols*100)+(colW/2)}%;top:0;bottom:0;width:0.5px;background:var(--color-border-tertiary);opacity:0.5"></div>`
+  ).join('');
+
+  msgs.forEach((m, idx) => {
+    const fi = ACTORS.findIndex(a => a.id === m.from);
+    const ti = ACTORS.findIndex(a => a.id === m.to);
+    const top = 18 + idx * 44;
+    const dc = `d${idx+1}`;
+    if (fi === ti) {
+      html += `<div class="msg-row ${dc}" style="position:absolute;top:${top}px;left:${(fi/cols*100)+(colW*0.05)}%;width:${colW*0.9}%">
+        <div class="msg-badge" style="background:${m.color}20;color:${m.color};border:0.5px solid ${m.color}44;width:100%;text-align:center">${m.label}</div>
+      </div>`;
+    } else {
+      const lft = Math.min(fi,ti);
+      const rgt = Math.max(fi,ti);
+      const left = (lft/cols*100)+(colW/2);
+      const right = (rgt/cols*100)+(colW/2);
+      const width = right - left;
+      const isR = ti > fi;
+      html += `<div class="msg-row ${dc}" style="position:absolute;top:${top+10}px;left:${left}%;width:${width}%">
+        <div class="msg-line ${isR?'arrow-r':'arrow-l'}" style="background:${m.color};color:${m.color}"></div>
+      </div>
+      <div class="msg-row ${dc}" style="position:absolute;top:${top}px;left:${left+0.5}%;width:${width-1}%">
+        <div class="msg-badge" style="background:${m.color}18;color:${m.color};border:0.5px solid ${m.color}33;margin:auto;max-width:96%">${m.label}</div>
+      </div>`;
+    }
+  });
+
+  fa.style.minHeight = Math.max(180, msgs.length * 50 + 30) + 'px';
+  fa.innerHTML = html;
+  setTimeout(() => { fa.querySelectorAll('.msg-row').forEach(r => r.classList.add('show')); }, 60);
+}
+
+function render() {
+  const s = STEPS[cur];
+  document.getElementById('stage-title').textContent = s.title;
+  renderPills();
+  renderFlow(s.msgs);
+  document.getElementById('detail-card').innerHTML = `
+    <div class="detail-title">Payload / what is being exchanged</div>
+    <div class="code-block">${s.detail}</div>
+    <div class="insight">${s.insight}</div>`;
+  document.getElementById('step-counter').textContent = `Step ${cur+1} of ${STEPS.length}`;
+  document.getElementById('prev-btn').disabled = cur === 0;
+  document.getElementById('next-btn').disabled = cur === STEPS.length - 1;
+  document.getElementById('next-btn').textContent = cur === STEPS.length - 1 ? 'Done ✓' : 'Next →';
+}
+
+function go(d) {
+  cur = Math.max(0, Math.min(STEPS.length - 1, cur + d));
+  render();
+}
+
+renderLegend();
+renderActors();
+render();
+</script>
+</body>
+</html>
