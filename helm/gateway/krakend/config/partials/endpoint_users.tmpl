@@ -1,0 +1,93 @@
+{
+  "endpoint": "/api/v1/users/patients/register",
+  "method": "POST",
+  "output_encoding": "json",
+  "backend": [{
+    "url_pattern": "/users/patients/register",
+    "host": ["{{ .hosts.user_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/users/doctors/register",
+  "method": "POST",
+  "output_encoding": "json",
+  "backend": [{
+    "url_pattern": "/users/doctors/register",
+    "host": ["{{ .hosts.user_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/users/{userId}",
+  "method": "GET",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/users/{userId}",
+    "host": ["{{ .hosts.user_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/users/{userId}",
+  "method": "DELETE",
+  "extra_config": {
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/users/{userId}",
+    "host": ["{{ .hosts.user_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/users/doctors/pending-verification",
+  "method": "GET",
+  "extra_config": {
+    {{ template "auth_doctor_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/users/doctors/pending-verification",
+    "host": ["{{ .hosts.user_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/users/doctors/{doctorUserId}/verify",
+  "method": "PUT",
+  "extra_config": {
+    {{ template "auth_doctor_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/users/doctors/{doctorUserId}/verify",
+    "host": ["{{ .hosts.user_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+}
