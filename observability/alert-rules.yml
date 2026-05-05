@@ -1,0 +1,46 @@
+groups:
+  - name: mediq-alerts
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          (
+            rate(http_server_requests_seconds_count{status=~"5.."}[5m])
+            /
+            rate(http_server_requests_seconds_count[5m])
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High 5xx error rate on {{ $labels.job }}"
+          description: "Error rate is {{ $value | humanizePercentage }} on {{ $labels.job }}"
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.99,
+            rate(http_server_requests_seconds_bucket[5m])
+          ) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p99 latency on {{ $labels.job }}"
+          description: "p99 latency is {{ $value }}s on {{ $labels.job }}"
+
+      - alert: KafkaConsumerLagHigh
+        expr: kafka_consumer_group_lag > 1000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka consumer group {{ $labels.consumergroup }} lag is high"
+          description: "Lag is {{ $value }} on topic {{ $labels.topic }}"
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is unreachable"
+          description: "Prometheus cannot scrape {{ $labels.job }} at {{ $labels.instance }}"
