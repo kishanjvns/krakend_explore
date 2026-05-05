@@ -21,6 +21,8 @@ data:
     {{- .Files.Get "config/partials/auth_doctor_nurse_admin.tmpl" | nindent 4 }}
   circuit_breaker.tmpl: |
     {{- .Files.Get "config/partials/circuit_breaker.tmpl" | nindent 4 }}
+  endpoint_users.tmpl: |
+    {{- .Files.Get "config/partials/endpoint_users.tmpl" | nindent 4 }}
   endpoint_patients.tmpl: |
     {{- .Files.Get "config/partials/endpoint_patients.tmpl" | nindent 4 }}
   endpoint_referrals.tmpl: |
