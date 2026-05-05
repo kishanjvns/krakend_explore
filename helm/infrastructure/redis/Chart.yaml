@@ -1,0 +1,4 @@
+apiVersion: v2
+name: mediq-redis
+description: Redis for mediq platform
+version: 0.1.0

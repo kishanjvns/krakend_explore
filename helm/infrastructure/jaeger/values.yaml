@@ -1,0 +1,6 @@
+image: jaegertracing/all-in-one:1.57
+uiPort: 16686
+otlpGrpcPort: 4317
+otlpHttpPort: 4318
+nodePort: 30086
+enabled: true

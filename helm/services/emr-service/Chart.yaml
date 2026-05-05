@@ -1,0 +1,4 @@
+apiVersion: v2
+name: mediq-emr-service
+description: mediq EMR Service (Event Sourcing)
+version: 0.1.0

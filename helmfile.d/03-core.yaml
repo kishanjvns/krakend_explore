@@ -1,0 +1,27 @@
+releases:
+  - name: mediq-appointment-service
+    chart: ./helm/services/appointment-service
+    namespace: mediq
+    needs:
+      - mediq/mediq-postgres
+      - mediq/mediq-kafka
+      - mediq/mediq-user-service
+      - mediq/mediq-doctor-service
+    values:
+      - ./helm/services/appointment-service/values.yaml
+    set:
+      - name: replicaCount
+        value: '{{ .Environment.Values.appointmentService.replicas | default 1 }}'
+
+  - name: mediq-notification-service
+    chart: ./helm/services/notification-service
+    namespace: mediq
+    needs:
+      - mediq/mediq-postgres
+      - mediq/mediq-kafka
+      - mediq/mediq-appointment-service
+    values:
+      - ./helm/services/notification-service/values.yaml
+    set:
+      - name: replicaCount
+        value: '{{ .Environment.Values.notificationService.replicas | default 1 }}'

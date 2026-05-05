@@ -1,0 +1,4 @@
+apiVersion: v2
+name: mediq-jaeger
+description: Jaeger distributed tracing for mediq
+version: 0.1.0

@@ -1,0 +1,20 @@
+name: krakend
+replicaCount: 1
+image:
+  repository: devopsfaith/krakend
+  tag: "2.7"
+  pullPolicy: IfNotPresent
+port: 8080
+nodePort: 30080
+configMapName: krakend-config
+env:
+  FC_ENABLE: "1"
+  FC_TEMPLATES: /etc/krakend/partials
+  FC_SETTINGS: /etc/krakend/settings
+resources:
+  requests:
+    memory: 128Mi
+    cpu: 100m
+  limits:
+    memory: 256Mi
+    cpu: 500m

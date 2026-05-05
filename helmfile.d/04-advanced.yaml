@@ -1,0 +1,27 @@
+releases:
+  - name: mediq-emr-service
+    chart: ./helm/services/emr-service
+    namespace: mediq
+    needs:
+      - mediq/mediq-postgres
+      - mediq/mediq-kafka
+      - mediq/mediq-appointment-service
+    values:
+      - ./helm/services/emr-service/values.yaml
+    set:
+      - name: replicaCount
+        value: '{{ .Environment.Values.emrService.replicas | default 1 }}'
+
+  - name: mediq-analytics-service
+    chart: ./helm/services/analytics-service
+    namespace: mediq
+    needs:
+      - mediq/mediq-postgres
+      - mediq/mediq-kafka
+      - mediq/mediq-user-service
+      - mediq/mediq-appointment-service
+    values:
+      - ./helm/services/analytics-service/values.yaml
+    set:
+      - name: replicaCount
+        value: '{{ .Environment.Values.analyticsService.replicas | default 1 }}'

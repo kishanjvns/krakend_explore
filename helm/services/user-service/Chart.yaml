@@ -1,0 +1,4 @@
+apiVersion: v2
+name: mediq-user-service
+description: mediq User Service
+version: 0.1.0

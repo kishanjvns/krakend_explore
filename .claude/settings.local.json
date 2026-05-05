@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git ls-tree *)",
+      "Bash(git -C /d/codebase/krakend_explore log --oneline --all)",
+      "Bash(git -C /d/codebase/krakend_explore branch -a)",
+      "Bash(git -C /d/codebase/krakend_explore branch --show-current)",
+      "Bash(git -C /d/codebase/krakend_explore stash list)",
+      "Bash(git -C /d/codebase/krakend_explore ls-tree -r --name-only dev/krakend-step6-auth-keycloak)",
+      "Bash(git -C /d/codebase/krakend_explore checkout dev/krakend-step6-auth-keycloak)",
+      "Bash(git -C /d/codebase/krakend_explore checkout -b feature/mediq-m1-user-service)",
+      "Bash(git -C /d/codebase/krakend_explore checkout dev/krakend-step6-auth-keycloak -- .)",
+      "Bash(mvn clean *)",
+      "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\Eclipse Adoptium\\\\\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:USERPROFILE\\\\.m2\\\\wrapper\\\\dists\" -ErrorAction SilentlyContinue | Select-Object -First 5 FullName)",
+      "Bash(git -C /d/codebase/krakend_explore status --short)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git -C D:/codebase/krakend_explore checkout feature/mediq-m4-advanced)",
+      "Bash(git -C D:/codebase/krakend_explore checkout -b fix/distributed-tracing)",
+      "Bash(Remove-Item \"D:\\\\codebase\\\\krakend_explore\\\\user-service\\\\src\\\\main\\\\java\\\\com\\\\mediq\\\\config\\\\TracingConfig.java\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item \"D:\\\\codebase\\\\krakend_explore\\\\doctor-service\\\\src\\\\main\\\\java\\\\com\\\\mediq\\\\doctor\\\\config\\\\TracingConfig.java\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item \"D:\\\\codebase\\\\krakend_explore\\\\appointment-service\\\\src\\\\main\\\\java\\\\com\\\\mediq\\\\appointment\\\\config\\\\TracingConfig.java\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item \"D:\\\\codebase\\\\krakend_explore\\\\notification-service\\\\src\\\\main\\\\java\\\\com\\\\mediq\\\\notification\\\\config\\\\TracingConfig.java\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item \"D:\\\\codebase\\\\krakend_explore\\\\analytics-service\\\\src\\\\main\\\\java\\\\com\\\\mediq\\\\analytics\\\\config\\\\TracingConfig.java\" -ErrorAction SilentlyContinue)"
+    ]
+  }
+}

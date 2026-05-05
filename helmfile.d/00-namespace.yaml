@@ -1,0 +1,7 @@
+releases:
+  - name: mediq-namespace
+    chart: ./helm/infrastructure/namespace
+    namespace: mediq
+    createNamespace: true
+    values:
+      - namespace: mediq
