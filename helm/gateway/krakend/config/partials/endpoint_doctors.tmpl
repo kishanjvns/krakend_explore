@@ -1,0 +1,93 @@
+{
+  "endpoint": "/api/v1/doctors/search",
+  "method": "GET",
+  "output_encoding": "no-op",
+  "backend": [{
+    "url_pattern": "/doctors/search",
+    "host": ["{{ .hosts.doctor_service }}"],
+    "encoding": "no-op",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/doctors/{doctorId}",
+  "method": "GET",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/doctors/{doctorId}",
+    "host": ["{{ .hosts.doctor_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/doctors/{doctorId}/availability",
+  "method": "GET",
+  "output_encoding": "no-op",
+  "backend": [{
+    "url_pattern": "/doctors/{doctorId}/availability",
+    "host": ["{{ .hosts.doctor_service }}"],
+    "encoding": "no-op",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/mobile/doctors/{doctorId}",
+  "method": "GET",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 500, "capacity": 500 },
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/doctors/{doctorId}",
+    "host": ["{{ .hosts.doctor_service }}"],
+    "encoding": "json",
+    "allow": ["doctorId", "fullName", "specializations", "verified", "averageRating"],
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/web/doctor-overview/{doctorId}",
+  "method": "GET",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 200, "capacity": 200 },
+    {{ template "auth_doctor_admin.tmpl" . }}
+  },
+  "backend": [
+    {
+      "url_pattern": "/doctors/{doctorId}",
+      "host": ["{{ .hosts.doctor_service }}"],
+      "encoding": "json",
+      "extra_config": {
+        {{ template "rate_limit_proxy.tmpl" . }},
+        {{ template "circuit_breaker.tmpl" . }}
+      }
+    },
+    {
+      "url_pattern": "/doctors/{doctorId}/availability",
+      "host": ["{{ .hosts.doctor_service }}"],
+      "encoding": "json",
+      "is_collection": true,
+      "mapping": { "collection": "availability" },
+      "extra_config": {
+        {{ template "rate_limit_proxy.tmpl" . }},
+        {{ template "circuit_breaker.tmpl" . }}
+      }
+    }
+  ]
+}

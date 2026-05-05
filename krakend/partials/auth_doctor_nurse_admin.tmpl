@@ -1,0 +1,16 @@
+"auth/validator": {
+  "alg": "RS256",
+  "jwk_url": "{{ .hosts.keycloak_internal }}/realms/trucare/protocol/openid-connect/certs",
+  "issuer": "{{ .hosts.keycloak_external }}/realms/trucare",
+  "cache": true,
+  "cache_duration": 900,
+  "disable_jwk_security": true,
+  "roles_key": "role",
+  "roles": ["DOCTOR", "NURSE", "ADMIN"],
+  "propagate_claims": [
+    ["sub",   "X-User-Id"],
+    ["email", "X-User-Email"],
+    ["role",  "X-User-Role"],
+    ["name",  "X-User-Name"]
+  ]
+}

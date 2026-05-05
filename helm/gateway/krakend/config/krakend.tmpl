@@ -1,0 +1,64 @@
+{
+  "$schema": "https://www.krakend.io/schema/v2.7/krakend.json",
+  "version": 3,
+  "name": "mediq API Gateway — Local Dev",
+  "port": 8080,
+  "timeout": "3000ms",
+  "cache_ttl": "300s",
+
+  "extra_config": {
+    "router": {
+      "return_error_msg": true
+    },
+    "telemetry/opentelemetry": {
+      "service_name": "mediq-krakend",
+      "service_version": "1.0.0",
+      "exporters": {
+        "otlp": [
+          {
+            "name": "jaeger-otlp",
+            "host": "jaeger",
+            "port": 4317,
+            "use_grpc": true,
+            "disable_metrics": false,
+            "disable_traces": false
+          }
+        ]
+      },
+      "layers": {
+        "global": {
+          "disable_metrics": false,
+          "disable_traces": false,
+          "disable_propagation": false
+        },
+        "proxy": {
+          "disable_metrics": false,
+          "disable_traces": false
+        },
+        "backend": {
+          "metrics": {
+            "disable_stage": false,
+            "round_trip": true,
+            "read_payload": true,
+            "detailed_connection": true,
+            "static_attributes": []
+          },
+          "traces": {
+            "disable_stage": false,
+            "round_trip": true,
+            "read_payload": true,
+            "detailed_connection": true,
+            "static_attributes": []
+          }
+        }
+      }
+    }
+  },
+
+  "endpoints": [
+    {{ template "endpoint_patients.tmpl" . }},
+    {{ template "endpoint_referrals.tmpl" . }},
+    {{ template "endpoint_doctors.tmpl" . }},
+    {{ template "endpoint_appointments.tmpl" . }}
+  ]
+}

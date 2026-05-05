@@ -41,6 +41,9 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "{{ .Values.username }}"]
@@ -56,6 +59,9 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: postgres-pvc
+        - name: init-script
+          configMap:
+            name: postgres-init
 ---
 apiVersion: v1
 kind: Service

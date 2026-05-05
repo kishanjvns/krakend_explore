@@ -52,7 +52,19 @@ spec:
             - name: krakend-config
               mountPath: /etc/krakend
               readOnly: true
+            - name: krakend-partials
+              mountPath: /etc/krakend/partials
+              readOnly: true
+            - name: krakend-settings
+              mountPath: /etc/krakend/settings
+              readOnly: true
       volumes:
         - name: krakend-config
           configMap:
-            name: {{ .Values.configMapName }}
+            name: krakend-config
+        - name: krakend-partials
+          configMap:
+            name: krakend-partials
+        - name: krakend-settings
+          configMap:
+            name: krakend-settings
