@@ -1,0 +1,49 @@
+releases:
+  - name: mediq-postgres
+    chart: ./helm/infrastructure/postgres
+    namespace: mediq
+    values:
+      - ./helm/infrastructure/postgres/values.yaml
+    set:
+      - name: image
+        value: postgres:16-alpine
+      - name: username
+        value: mediq
+      - name: password
+        value: mediq
+      - name: storage
+        value: '{{ .Environment.Values.postgres.storage | default "2Gi" }}'
+
+  - name: mediq-redis
+    chart: ./helm/infrastructure/redis
+    namespace: mediq
+    values:
+      - ./helm/infrastructure/redis/values.yaml
+
+  - name: mediq-zookeeper
+    chart: ./helm/infrastructure/zookeeper
+    namespace: mediq
+    values:
+      - ./helm/infrastructure/zookeeper/values.yaml
+
+  - name: mediq-kafka
+    chart: ./helm/infrastructure/kafka
+    namespace: mediq
+    needs:
+      - mediq/mediq-zookeeper
+    values:
+      - ./helm/infrastructure/kafka/values.yaml
+
+  - name: mediq-keycloak
+    chart: ./helm/infrastructure/keycloak
+    namespace: mediq
+    needs:
+      - mediq/mediq-postgres
+    values:
+      - ./helm/infrastructure/keycloak/values.yaml
+
+  - name: mediq-jaeger
+    chart: ./helm/infrastructure/jaeger
+    namespace: mediq
+    values:
+      - ./helm/infrastructure/jaeger/values.yaml

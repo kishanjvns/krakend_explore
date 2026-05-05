@@ -1,0 +1,12 @@
+image: quay.io/keycloak/keycloak:24.0.3
+port: 8090
+nodePort: 30090
+adminPassword: admin
+realmConfigMap: keycloak-realm
+env:
+  KEYCLOAK_ADMIN: admin
+  KEYCLOAK_ADMIN_PASSWORD: admin
+  KC_HTTP_PORT: "8090"
+  KC_HOSTNAME_STRICT: "false"
+  KC_HOSTNAME_STRICT_HTTPS: "false"
+  KC_HTTP_ENABLED: "true"

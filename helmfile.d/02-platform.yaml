@@ -1,0 +1,27 @@
+releases:
+  - name: mediq-user-service
+    chart: ./helm/services/user-service
+    namespace: mediq
+    needs:
+      - mediq/mediq-postgres
+      - mediq/mediq-redis
+      - mediq/mediq-kafka
+      - mediq/mediq-keycloak
+    values:
+      - ./helm/services/user-service/values.yaml
+    set:
+      - name: replicaCount
+        value: '{{ .Environment.Values.userService.replicas | default 1 }}'
+
+  - name: mediq-doctor-service
+    chart: ./helm/services/doctor-service
+    namespace: mediq
+    needs:
+      - mediq/mediq-postgres
+      - mediq/mediq-kafka
+      - mediq/mediq-user-service
+    values:
+      - ./helm/services/doctor-service/values.yaml
+    set:
+      - name: replicaCount
+        value: '{{ .Environment.Values.doctorService.replicas | default 1 }}'

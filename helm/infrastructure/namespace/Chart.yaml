@@ -1,0 +1,4 @@
+apiVersion: v2
+name: mediq-namespace
+description: mediq Kubernetes namespace
+version: 0.1.0

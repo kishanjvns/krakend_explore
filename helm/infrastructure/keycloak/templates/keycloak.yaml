@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: mediq
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: {{ .Values.image }}
+          args: ["start-dev", "--import-realm"]
+          ports:
+            - containerPort: {{ .Values.port }}
+          env:
+            {{- range $key, $val := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: realm-config
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /realms/mediq
+              port: {{ .Values.port }}
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 10
+      volumes:
+        - name: realm-config
+          configMap:
+            name: {{ .Values.realmConfigMap }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-service
+  namespace: mediq
+spec:
+  type: NodePort
+  selector:
+    app: keycloak
+  ports:
+    - port: {{ .Values.port }}
+      targetPort: {{ .Values.port }}
+      nodePort: {{ .Values.nodePort }}

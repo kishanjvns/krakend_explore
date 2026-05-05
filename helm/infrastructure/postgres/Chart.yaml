@@ -1,0 +1,4 @@
+apiVersion: v2
+name: mediq-postgres
+description: PostgreSQL for mediq platform
+version: 0.1.0

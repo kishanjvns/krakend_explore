@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+  namespace: mediq
+  labels:
+    app: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+        - name: kafka
+          image: {{ .Values.image }}
+          ports:
+            - containerPort: {{ .Values.port }}
+          env:
+            {{- range $key, $val := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
+            {{- end }}
+          readinessProbe:
+            exec:
+              command: ["kafka-broker-api-versions", "--bootstrap-server", "localhost:{{ .Values.port }}"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service
+  namespace: mediq
+spec:
+  type: ClusterIP
+  selector:
+    app: kafka
+  ports:
+    - port: {{ .Values.port }}
+      targetPort: {{ .Values.port }}

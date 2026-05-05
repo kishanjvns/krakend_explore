@@ -1,0 +1,27 @@
+name: notification-service
+replicaCount: 1
+image:
+  repository: mediq/notification-service
+  tag: latest
+  pullPolicy: IfNotPresent
+port: 8085
+env:
+  DB_URL: jdbc:postgresql://postgres-service:5432/mediq_notifications
+  DB_USERNAME: mediq
+  DB_PASSWORD: mediq
+  KAFKA_BOOTSTRAP_SERVERS: kafka-service:9092
+  JAEGER_ENDPOINT: http://jaeger-service:4318/v1/traces
+  ENVIRONMENT: kubernetes
+  JAVA_OPTS: "-Xms128m -Xmx384m -XX:+UseG1GC"
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 100m
+  limits:
+    memory: 512Mi
+    cpu: 500m
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 4
+  cpuThreshold: 70

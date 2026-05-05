@@ -1,0 +1,4 @@
+apiVersion: v2
+name: mediq-kafka
+description: Kafka for mediq platform
+version: 0.1.0

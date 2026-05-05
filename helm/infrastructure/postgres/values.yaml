@@ -1,0 +1,6 @@
+image: postgres:16-alpine
+username: mediq
+password: mediq
+database: mediq_users
+storage: 2Gi
+port: 5432

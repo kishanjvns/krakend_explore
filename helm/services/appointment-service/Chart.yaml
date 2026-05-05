@@ -1,0 +1,4 @@
+apiVersion: v2
+name: mediq-appointment-service
+description: mediq Appointment Service
+version: 0.1.0
