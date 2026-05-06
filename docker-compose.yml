@@ -287,6 +287,41 @@ services:
       retries: 5
       start_period: 45s
 
+  # ── payment-service ──────────────────────────────────────────────────────────
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    container_name: mediq-payment-service
+    ports:
+      - "8089:8089"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/mediq_payments
+      DB_USERNAME: mediq
+      DB_PASSWORD: mediq
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_placeholder}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_placeholder}
+      TEMPORAL_HOST: temporal
+      TEMPORAL_PORT: 7233
+      JAEGER_ENDPOINT: http://jaeger:4318/v1/traces
+    networks:
+      - mediq-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",
+             "http://localhost:8089/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
   # ── notification-service ─────────────────────────────────────────────────────
   notification-service:
     build:

@@ -31,6 +31,8 @@ data:
     {{- .Files.Get "config/partials/endpoint_doctors.tmpl" | nindent 4 }}
   endpoint_appointments.tmpl: |
     {{- .Files.Get "config/partials/endpoint_appointments.tmpl" | nindent 4 }}
+  endpoint_payments.tmpl: |
+    {{- .Files.Get "config/partials/endpoint_payments.tmpl" | nindent 4 }}
   rate_limit_proxy.tmpl: |
     {{- .Files.Get "config/partials/rate_limit_proxy.tmpl" | nindent 4 }}
 ---

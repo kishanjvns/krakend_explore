@@ -13,6 +13,19 @@ releases:
       - name: replicaCount
         value: '{{ .Environment.Values.appointmentService.replicas | default 1 }}'
 
+  - name: mediq-payment-service
+    chart: ./helm/services/payment-service
+    namespace: mediq
+    needs:
+      - mediq/mediq-postgres
+      - mediq/mediq-kafka
+      - mediq/mediq-temporal
+    values:
+      - ./helm/services/payment-service/values.yaml
+    set:
+      - name: replicaCount
+        value: '{{ .Environment.Values.paymentService.replicas | default 1 }}'
+
   - name: mediq-notification-service
     chart: ./helm/services/notification-service
     namespace: mediq

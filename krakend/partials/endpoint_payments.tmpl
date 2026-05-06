@@ -1,0 +1,36 @@
+{
+  "endpoint": "/api/v1/payments/intent",
+  "method": "POST",
+  "output_encoding": "json",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 100, "capacity": 100 },
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/payments/intent",
+    "host": ["{{ .hosts.payment_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/payments/{paymentId}",
+  "method": "GET",
+  "output_encoding": "json",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/payments/{paymentId}",
+    "host": ["{{ .hosts.payment_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+}
