@@ -137,6 +137,7 @@ public class AppointmentService {
             AppointmentOutboxEntity outbox = new AppointmentOutboxEntity();
             outbox.setAggregateId(appointment.getId());
             outbox.setEventType(eventType);
+            outbox.setDestination("mediq.appointment.events");
             outbox.setPayload(objectMapper.writeValueAsString(event));
             outboxRepository.save(outbox);
         } catch (JsonProcessingException e) {

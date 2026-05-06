@@ -20,6 +20,16 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: mediq-postgres
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_replication_slots=10"
+      - "-c"
+      - "max_wal_senders=10"
+      - "-c"
+      - "wal_keep_size=1024"
     environment:
       POSTGRES_USER: mediq
       POSTGRES_PASSWORD: mediq
@@ -94,6 +104,147 @@ services:
       timeout: 10s
       retries: 10
       start_period: 30s
+
+  # ── Debezium Kafka Connect — one per service ─────────────────────────────────
+  mediq-user-connect:
+    image: quay.io/debezium/connect:2.7
+    container_name: mediq-user-connect
+    ports:
+      - "8091:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: mediq-user-connect-group
+      CONFIG_STORAGE_TOPIC: mediq.connect.user.configs
+      OFFSET_STORAGE_TOPIC: mediq.connect.user.offsets
+      STATUS_STORAGE_TOPIC: mediq.connect.user.status
+      CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      STATUS_STORAGE_REPLICATION_FACTOR: "1"
+    networks:
+      - mediq-net
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8083/connectors"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  mediq-appointment-connect:
+    image: quay.io/debezium/connect:2.7
+    container_name: mediq-appointment-connect
+    ports:
+      - "8092:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: mediq-appointment-connect-group
+      CONFIG_STORAGE_TOPIC: mediq.connect.appointment.configs
+      OFFSET_STORAGE_TOPIC: mediq.connect.appointment.offsets
+      STATUS_STORAGE_TOPIC: mediq.connect.appointment.status
+      CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      STATUS_STORAGE_REPLICATION_FACTOR: "1"
+    networks:
+      - mediq-net
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8083/connectors"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  mediq-payment-connect:
+    image: quay.io/debezium/connect:2.7
+    container_name: mediq-payment-connect
+    ports:
+      - "8093:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: mediq-payment-connect-group
+      CONFIG_STORAGE_TOPIC: mediq.connect.payment.configs
+      OFFSET_STORAGE_TOPIC: mediq.connect.payment.offsets
+      STATUS_STORAGE_TOPIC: mediq.connect.payment.status
+      CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      STATUS_STORAGE_REPLICATION_FACTOR: "1"
+    networks:
+      - mediq-net
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8083/connectors"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  mediq-doctor-connect:
+    image: quay.io/debezium/connect:2.7
+    container_name: mediq-doctor-connect
+    ports:
+      - "8094:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: mediq-doctor-connect-group
+      CONFIG_STORAGE_TOPIC: mediq.connect.doctor.configs
+      OFFSET_STORAGE_TOPIC: mediq.connect.doctor.offsets
+      STATUS_STORAGE_TOPIC: mediq.connect.doctor.status
+      CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      STATUS_STORAGE_REPLICATION_FACTOR: "1"
+    networks:
+      - mediq-net
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8083/connectors"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  mediq-emr-connect:
+    image: quay.io/debezium/connect:2.7
+    container_name: mediq-emr-connect
+    ports:
+      - "8095:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: mediq-emr-connect-group
+      CONFIG_STORAGE_TOPIC: mediq.connect.emr.configs
+      OFFSET_STORAGE_TOPIC: mediq.connect.emr.offsets
+      STATUS_STORAGE_TOPIC: mediq.connect.emr.status
+      CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      STATUS_STORAGE_REPLICATION_FACTOR: "1"
+    networks:
+      - mediq-net
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8083/connectors"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
   # ── Keycloak ─────────────────────────────────────────────────────────────────
   keycloak:
