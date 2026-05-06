@@ -503,6 +503,7 @@ services:
       FC_ENABLE: "1"
       FC_TEMPLATES: "/etc/krakend/partials"
       FC_SETTINGS: "/etc/krakend/settings"
+      JAEGER_HOST: "jaeger"
     command: ["run", "--config", "/etc/krakend/krakend.tmpl", "--debug"]
     networks:
       - mediq-net

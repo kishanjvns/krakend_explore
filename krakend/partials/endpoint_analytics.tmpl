@@ -1,0 +1,51 @@
+{
+  "endpoint": "/api/v1/analytics/dashboard",
+  "method": "GET",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 60, "capacity": 60 },
+    {{ template "auth_doctor_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/analytics/dashboard",
+    "host": ["{{ .hosts.analytics_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/analytics/appointments/daily",
+  "method": "GET",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 60, "capacity": 60 },
+    {{ template "auth_doctor_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/analytics/appointments/daily",
+    "host": ["{{ .hosts.analytics_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/analytics/doctors/performance",
+  "method": "GET",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 60, "capacity": 60 },
+    {{ template "auth_doctor_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/analytics/doctors/performance",
+    "host": ["{{ .hosts.analytics_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+}

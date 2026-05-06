@@ -17,7 +17,7 @@
         "otlp": [
           {
             "name": "jaeger-otlp",
-            "host": "jaeger-service",
+            "host": "{{ .env.JAEGER_HOST }}",
             "port": 4317,
             "use_grpc": true,
             "disable_metrics": false,
@@ -61,6 +61,9 @@
     {{ template "endpoint_referrals.tmpl" . }},
     {{ template "endpoint_doctors.tmpl" . }},
     {{ template "endpoint_appointments.tmpl" . }},
-    {{ template "endpoint_payments.tmpl" . }}
+    {{ template "endpoint_payments.tmpl" . }},
+    {{ template "endpoint_emr.tmpl" . }},
+    {{ template "endpoint_analytics.tmpl" . }},
+    {{ template "endpoint_notifications.tmpl" . }}
   ]
 }

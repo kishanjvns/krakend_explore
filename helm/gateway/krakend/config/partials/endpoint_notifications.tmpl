@@ -1,0 +1,17 @@
+{
+  "endpoint": "/api/v1/notifications/user/{userId}",
+  "method": "GET",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 200, "capacity": 200 },
+    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/notifications/user/{userId}",
+    "host": ["{{ .hosts.notification_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+}
