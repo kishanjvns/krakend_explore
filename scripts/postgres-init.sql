@@ -22,6 +22,11 @@ GRANT ALL PRIVILEGES ON DATABASE mediq_notifications TO mediq;
 GRANT ALL PRIVILEGES ON DATABASE mediq_emr TO mediq;
 GRANT ALL PRIVILEGES ON DATABASE mediq_analytics TO mediq;
 
+SELECT 'CREATE DATABASE mediq_payments'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'mediq_payments')\gexec
+
+GRANT ALL PRIVILEGES ON DATABASE mediq_payments TO mediq;
+
 SELECT 'CREATE DATABASE temporal'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'temporal')\gexec
 

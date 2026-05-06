@@ -1,0 +1,30 @@
+name: payment-service
+replicaCount: 1
+image:
+  repository: mediq/payment-service
+  tag: latest
+  pullPolicy: IfNotPresent
+port: 8089
+env:
+  DB_URL: jdbc:postgresql://postgres-service:5432/mediq_payments
+  DB_USERNAME: mediq
+  DB_PASSWORD: mediq
+  KAFKA_BOOTSTRAP_SERVERS: kafka-service:9092
+  STRIPE_SECRET_KEY: sk_test_placeholder
+  STRIPE_WEBHOOK_SECRET: whsec_placeholder
+  TEMPORAL_HOST: temporal-service
+  TEMPORAL_PORT: "7233"
+  JAEGER_ENDPOINT: http://jaeger-service:4318/v1/traces
+  JAVA_OPTS: "-Xms128m -Xmx384m -XX:+UseG1GC"
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 100m
+  limits:
+    memory: 512Mi
+    cpu: 500m
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  cpuThreshold: 70

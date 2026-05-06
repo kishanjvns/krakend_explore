@@ -6,6 +6,7 @@
   "appointment_service":  ["http://appointment-service:8084"],
   "emr_service":          ["http://emr-service:8086"],
   "analytics_service":    ["http://analytics-service:8087"],
+  "payment_service":      ["http://payment-service:8089"],
   "keycloak_internal":    "http://keycloak-service:8090",
   "keycloak_external":    "http://localhost:8090"
 }

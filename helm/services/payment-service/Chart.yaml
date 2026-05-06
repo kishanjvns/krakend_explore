@@ -1,0 +1,4 @@
+apiVersion: v2
+name: mediq-payment-service
+description: mediq Payment Service — Stripe Integration
+version: 0.1.0
