@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>mediq — Appointment Confirmed</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; }
+        .container { max-width: 600px; margin: 40px auto; background: white;
+                     border-radius: 8px; padding: 40px; }
+        .header { background: #16a34a; color: white; padding: 20px;
+                  border-radius: 8px 8px 0 0; text-align: center; }
+        .detail-box { background: #f0fdf4; border-left: 4px solid #16a34a;
+                      padding: 20px; border-radius: 4px; margin: 20px 0; }
+        .footer { color: #6b7280; font-size: 12px; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>Appointment Confirmed ✓</h1></div>
+    <p>Dear <span th:text="${patientName}">Patient</span>,</p>
+    <p>Your appointment has been confirmed successfully.</p>
+    <div class="detail-box">
+        <p><strong>Doctor:</strong> <span th:text="${doctorName}">Dr. X</span></p>
+        <p><strong>Date:</strong> <span th:text="${appointmentDate}">Jan 15, 2024</span></p>
+        <p><strong>Time:</strong> <span th:text="${appointmentTime}">10:00 AM</span></p>
+        <p><strong>Booking ID:</strong> <span th:text="${appointmentId}">APT-001</span></p>
+    </div>
+    <p>Please arrive 10 minutes before your scheduled time.</p>
+    <div class="footer">&copy; 2024 mediq Healthcare</div>
+</div>
+</body>
+</html>

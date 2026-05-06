@@ -3,6 +3,8 @@ package com.mediq.controller;
 import com.mediq.dto.*;
 import com.mediq.interceptor.UserContextHolder;
 import com.mediq.model.UserContext;
+import com.mediq.service.OtpService;
+import com.mediq.service.OtpVerificationResult;
 import com.mediq.service.UserService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -12,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -21,9 +24,11 @@ public class UserController {
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
+    private final OtpService otpService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, OtpService otpService) {
         this.userService = userService;
+        this.otpService = otpService;
     }
 
     // ── Public endpoints (no auth required in KrakenD) ────────────────────────
@@ -79,6 +84,35 @@ public class UserController {
         }
         UUID adminId = UUID.fromString(ctx.userId());
         return ResponseEntity.ok(userService.verifyDoctor(doctorUserId, request, adminId));
+    }
+
+    // ── OTP endpoints ─────────────────────────────────────────────────────────
+
+    @PostMapping("/{userId}/send-otp")
+    public ResponseEntity<Map<String, String>> sendOtp(@PathVariable UUID userId) {
+        otpService.sendOtp(userId);
+        return ResponseEntity.ok(Map.of(
+            "message", "OTP sent to your registered contact(s)",
+            "expiresIn", "5 minutes"
+        ));
+    }
+
+    @PostMapping("/{userId}/verify-otp")
+    public ResponseEntity<Map<String, String>> verifyOtp(
+            @PathVariable UUID userId,
+            @RequestBody Map<String, String> request) {
+        String otp = request.get("otp");
+        if (otp == null || otp.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "OTP is required"));
+        }
+        OtpVerificationResult result = otpService.verifyOtp(userId, otp);
+        if (result.success()) {
+            return ResponseEntity.ok(Map.of("message", result.message()));
+        }
+        return ResponseEntity.badRequest().body(Map.of(
+            "status", result.status(),
+            "message", result.message()
+        ));
     }
 
     @GetMapping("/health")

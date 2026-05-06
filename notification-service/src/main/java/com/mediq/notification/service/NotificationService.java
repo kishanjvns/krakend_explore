@@ -6,10 +6,16 @@ import com.mediq.notification.model.Channel;
 import com.mediq.notification.model.NotificationEntity;
 import com.mediq.notification.model.NotificationStatus;
 import com.mediq.notification.repository.NotificationRepository;
+import com.mediq.notification.strategy.email.EmailSender;
+import com.mediq.notification.strategy.otp.OtpSender;
+import com.mediq.notification.strategy.sms.SmsSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -22,19 +28,33 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final EmailGateway emailGateway;
     private final SmsGateway smsGateway;
+    private final OtpSender otpSender;
+    private final EmailSender emailSender;
+    private final SmsSender smsSender;
+    private final TemplateEngine templateEngine;
+    private final String fromName;
 
-    public NotificationService(NotificationRepository notificationRepository,
-                                EmailGateway emailGateway,
-                                SmsGateway smsGateway) {
+    public NotificationService(
+            NotificationRepository notificationRepository,
+            EmailGateway emailGateway,
+            SmsGateway smsGateway,
+            OtpSender otpSender,
+            EmailSender emailSender,
+            SmsSender smsSender,
+            TemplateEngine templateEngine,
+            @Value("${mediq.notification.from-name}") String fromName) {
         this.notificationRepository = notificationRepository;
         this.emailGateway = emailGateway;
         this.smsGateway = smsGateway;
+        this.otpSender = otpSender;
+        this.emailSender = emailSender;
+        this.smsSender = smsSender;
+        this.templateEngine = templateEngine;
+        this.fromName = fromName;
     }
 
-    /**
-     * Send a welcome email to a newly registered user.
-     * Idempotent — re-entrant calls with the same idempotencyKey are silently ignored.
-     */
+    // ── Legacy stub-based methods (kept for backward compat) ─────────────────
+
     @Transactional
     public void sendWelcomeNotification(UserEvent event, String idempotencyKey) {
         if (notificationRepository.existsByIdempotencyKey(idempotencyKey)) {
@@ -68,9 +88,6 @@ public class NotificationService {
         notificationRepository.save(notification);
     }
 
-    /**
-     * Send an SMS confirmation when an appointment is confirmed.
-     */
     @Transactional
     public void sendAppointmentConfirmation(AppointmentEvent event, String idempotencyKey) {
         if (notificationRepository.existsByIdempotencyKey(idempotencyKey)) {
@@ -104,9 +121,6 @@ public class NotificationService {
         notificationRepository.save(notification);
     }
 
-    /**
-     * Send an SMS cancellation notice when an appointment is cancelled.
-     */
     @Transactional
     public void sendCancellationNotice(AppointmentEvent event, String idempotencyKey) {
         if (notificationRepository.existsByIdempotencyKey(idempotencyKey)) {
@@ -140,18 +154,62 @@ public class NotificationService {
         notificationRepository.save(notification);
     }
 
-    // ---------------------------------------------------------------------------
-    // Helpers
-    // ---------------------------------------------------------------------------
+    // ── Strategy-based methods ────────────────────────────────────────────────
+
+    public void sendOtpViaPhone(String userId, String phone, String otp, int expiresIn) {
+        otpSender.sendOtp(userId, phone, otp, expiresIn);
+    }
+
+    public void sendOtpViaEmail(String userId, String email, String userName,
+                                 String otp, int expiresIn) {
+        Context ctx = new Context();
+        ctx.setVariable("userName", userName);
+        ctx.setVariable("otp", otp);
+        ctx.setVariable("expiresIn", expiresIn);
+
+        String body = templateEngine.process("email/otp-email", ctx);
+        emailSender.sendEmail(email, "mediq — Your OTP Verification Code", body, true);
+        log.info("OTP email sent → userId={} email={}", userId, email);
+    }
+
+    public void sendPaymentFailed(String patientEmail, String appointmentId,
+                                   String amount, String failureReason) {
+        Context ctx = new Context();
+        ctx.setVariable("patientName", "Patient");
+        ctx.setVariable("appointmentId", appointmentId);
+        ctx.setVariable("amount", amount);
+        ctx.setVariable("failureReason", failureReason != null ? failureReason : "Payment declined");
+        ctx.setVariable("retryLink", "#");
+
+        String body = templateEngine.process("email/payment-failed-email", ctx);
+
+        if (patientEmail != null) {
+            emailSender.sendEmail(patientEmail,
+                "mediq — Action Required: Payment Failed", body, true);
+        }
+
+        String smsBody = String.format(
+            "mediq: Payment of Rs.%s failed. Retry within 24hrs or appointment will be cancelled.",
+            amount);
+        smsSender.sendSms(null, smsBody);
+
+        log.info("Payment failed notifications sent → appointmentId={}", appointmentId);
+    }
+
+    public void sendAppointmentAutoCancelled(String appointmentId, String reason) {
+        String smsBody = String.format(
+            "mediq: Appointment %s has been auto-cancelled. Reason: %s", appointmentId, reason);
+        smsSender.sendSms(null, smsBody);
+        log.info("Auto-cancel notifications sent → appointmentId={}", appointmentId);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private UUID toUuid(String value) {
-        if (value == null) {
-            return UUID.randomUUID();
-        }
+        if (value == null) return UUID.randomUUID();
         try {
             return UUID.fromString(value);
         } catch (IllegalArgumentException ex) {
-            // Gracefully handle non-UUID string identifiers
             return UUID.nameUUIDFromBytes(value.getBytes());
         }
     }

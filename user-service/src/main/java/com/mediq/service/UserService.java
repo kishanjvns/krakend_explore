@@ -29,19 +29,22 @@ public class UserService {
     private final UserCacheService cacheService;
     private final UserMapper userMapper;
     private final ObjectMapper objectMapper;
+    private final OtpService otpService;
 
     public UserService(UserRepository userRepository,
                        DoctorProfileRepository doctorProfileRepository,
                        UserOutboxRepository outboxRepository,
                        UserCacheService cacheService,
                        UserMapper userMapper,
-                       ObjectMapper objectMapper) {
+                       ObjectMapper objectMapper,
+                       OtpService otpService) {
         this.userRepository = userRepository;
         this.doctorProfileRepository = doctorProfileRepository;
         this.outboxRepository = outboxRepository;
         this.cacheService = cacheService;
         this.userMapper = userMapper;
         this.objectMapper = objectMapper;
+        this.otpService = otpService;
     }
 
     @Transactional
@@ -54,7 +57,9 @@ public class UserService {
         UserEvent event = buildEvent("USER_REGISTERED", user, request.contacts());
         saveToOutbox(event);
 
-        log.info("Patient registered: userId={}", user.getId());
+        otpService.sendOtp(user.getId());
+
+        log.info("Patient registered + OTP triggered: userId={}", user.getId());
         return userMapper.toResponse(user);
     }
 
@@ -76,7 +81,9 @@ public class UserService {
         UserEvent event = buildEvent("USER_REGISTERED", user, request.contacts());
         saveToOutbox(event);
 
-        log.info("Doctor registered (PENDING verification): userId={}", user.getId());
+        otpService.sendOtp(user.getId());
+
+        log.info("Doctor registered (PENDING verification) + OTP triggered: userId={}", user.getId());
         return userMapper.toResponse(user);
     }
 
