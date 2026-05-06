@@ -1,0 +1,6 @@
+image: temporalio/auto-setup:1.24.2
+uiImage: temporalio/ui:2.26.2
+port: 7233
+uiPort: 8080
+uiNodePort: 30088
+enabled: true

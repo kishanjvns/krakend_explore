@@ -21,3 +21,12 @@ GRANT ALL PRIVILEGES ON DATABASE mediq_appointments TO mediq;
 GRANT ALL PRIVILEGES ON DATABASE mediq_notifications TO mediq;
 GRANT ALL PRIVILEGES ON DATABASE mediq_emr TO mediq;
 GRANT ALL PRIVILEGES ON DATABASE mediq_analytics TO mediq;
+
+SELECT 'CREATE DATABASE temporal'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'temporal')\gexec
+
+SELECT 'CREATE DATABASE temporal_visibility'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'temporal_visibility')\gexec
+
+GRANT ALL PRIVILEGES ON DATABASE temporal TO mediq;
+GRANT ALL PRIVILEGES ON DATABASE temporal_visibility TO mediq;

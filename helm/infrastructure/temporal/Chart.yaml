@@ -1,0 +1,4 @@
+apiVersion: v2
+name: mediq-temporal
+description: Temporal workflow server for mediq
+version: 0.1.0
