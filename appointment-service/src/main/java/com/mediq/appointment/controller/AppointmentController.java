@@ -7,10 +7,17 @@ import com.mediq.appointment.dto.SlotResponse;
 import com.mediq.appointment.model.AppointmentSlotEntity;
 import com.mediq.appointment.repository.AppointmentSlotRepository;
 import com.mediq.appointment.service.AppointmentService;
+import com.mediq.appointment.temporal.workflow.AppointmentBookingWorkflow;
+import com.mediq.appointment.temporal.workflow.BookingRequest;
+import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowOptions;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -21,31 +28,85 @@ public class AppointmentController {
 
     private final AppointmentService appointmentService;
     private final AppointmentSlotRepository slotRepository;
+    private final WorkflowClient workflowClient;
+    private final String taskQueue;
 
-    public AppointmentController(AppointmentService appointmentService,
-                                  AppointmentSlotRepository slotRepository) {
+    public AppointmentController(
+            AppointmentService appointmentService,
+            AppointmentSlotRepository slotRepository,
+            WorkflowClient workflowClient,
+            @Value("${temporal.task-queue}") String taskQueue) {
         this.appointmentService = appointmentService;
         this.slotRepository = slotRepository;
+        this.workflowClient = workflowClient;
+        this.taskQueue = taskQueue;
     }
 
     @PostMapping("/appointments")
-    public ResponseEntity<AppointmentResponse> bookAppointment(
+    public ResponseEntity<Map<String, Object>> bookAppointment(
             @RequestBody BookAppointmentRequest request,
-            @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        BookAppointmentRequest effectiveRequest = request;
-        if (userId != null && request.patientId() == null) {
-            effectiveRequest = new BookAppointmentRequest(request.slotId(), UUID.fromString(userId));
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-User-Email", required = false) String userEmail) {
+
+        UUID patientId = request.patientId() != null
+            ? request.patientId()
+            : (userId != null ? UUID.fromString(userId) : null);
+
+        UUID doctorId = request.doctorId();
+        // Fall back to slot's doctorId if not provided in request
+        if (doctorId == null && request.slotId() != null) {
+            doctorId = slotRepository.findById(request.slotId())
+                .map(AppointmentSlotEntity::getDoctorId)
+                .orElse(null);
         }
-        return ResponseEntity.ok(appointmentService.bookAppointment(effectiveRequest));
+
+        BookingRequest bookingRequest = new BookingRequest(
+            patientId,
+            doctorId,
+            request.slotId(),
+            request.amount() != null ? request.amount() : BigDecimal.ZERO,
+            userEmail != null ? userEmail : ""
+        );
+
+        String workflowId = "appointment-" + UUID.randomUUID();
+
+        AppointmentBookingWorkflow workflow = workflowClient.newWorkflowStub(
+            AppointmentBookingWorkflow.class,
+            WorkflowOptions.newBuilder()
+                .setWorkflowId(workflowId)
+                .setTaskQueue(taskQueue)
+                .setWorkflowExecutionTimeout(Duration.ofMinutes(15))
+                .build());
+
+        WorkflowClient.start(workflow::bookAppointment, bookingRequest);
+
+        return ResponseEntity.accepted().body(Map.of(
+            "workflowId", workflowId,
+            "status", "INITIATED",
+            "message", "Booking started, awaiting payment"
+        ));
+    }
+
+    @GetMapping("/appointments/{workflowId}/status")
+    public ResponseEntity<Map<String, String>> getBookingStatus(
+            @PathVariable String workflowId) {
+        AppointmentBookingWorkflow workflow = workflowClient.newWorkflowStub(
+            AppointmentBookingWorkflow.class, workflowId);
+        return ResponseEntity.ok(Map.of(
+            "workflowId", workflowId,
+            "status", workflow.getBookingStatus()
+        ));
     }
 
     @GetMapping("/appointments/{appointmentId}")
-    public ResponseEntity<AppointmentResponse> getAppointment(@PathVariable UUID appointmentId) {
+    public ResponseEntity<AppointmentResponse> getAppointment(
+            @PathVariable UUID appointmentId) {
         return ResponseEntity.ok(appointmentService.getAppointment(appointmentId));
     }
 
     @PutMapping("/appointments/{appointmentId}/confirm")
-    public ResponseEntity<AppointmentResponse> confirmAppointment(@PathVariable UUID appointmentId) {
+    public ResponseEntity<AppointmentResponse> confirmAppointment(
+            @PathVariable UUID appointmentId) {
         return ResponseEntity.ok(appointmentService.confirmAppointment(appointmentId));
     }
 

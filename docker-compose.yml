@@ -142,6 +142,46 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Temporal Server ──────────────────────────────────────────────────────────
+  temporal:
+    image: temporalio/auto-setup:1.24.2
+    container_name: mediq-temporal
+    ports:
+      - "7233:7233"
+    environment:
+      DB: postgresql
+      DB_PORT: 5432
+      POSTGRES_USER: mediq
+      POSTGRES_PWD: mediq
+      POSTGRES_SEEDS: postgres
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    networks:
+      - mediq-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "tctl", "--address", "localhost:7233", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  # ── Temporal Web UI ───────────────────────────────────────────────────────────
+  temporal-ui:
+    image: temporalio/ui:2.26.2
+    container_name: mediq-temporal-ui
+    ports:
+      - "8088:8080"
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:8088
+    networks:
+      - mediq-net
+    depends_on:
+      temporal:
+        condition: service_healthy
+
   # ── user-service ─────────────────────────────────────────────────────────────
   user-service:
     build:
@@ -228,12 +268,16 @@ services:
       DB_PASSWORD: mediq
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JAEGER_ENDPOINT: http://jaeger:4318/v1/traces
+      TEMPORAL_HOST: temporal
+      TEMPORAL_PORT: 7233
     networks:
       - mediq-net
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      temporal:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider",

@@ -47,3 +47,11 @@ releases:
     namespace: mediq
     values:
       - ./helm/infrastructure/jaeger/values.yaml
+
+  - name: mediq-temporal
+    chart: ./helm/infrastructure/temporal
+    namespace: mediq
+    needs:
+      - mediq/mediq-postgres
+    values:
+      - ./helm/infrastructure/temporal/values.yaml
