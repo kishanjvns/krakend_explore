@@ -35,3 +35,12 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'temporal_visibility')
 
 GRANT ALL PRIVILEGES ON DATABASE temporal TO mediq;
 GRANT ALL PRIVILEGES ON DATABASE temporal_visibility TO mediq;
+
+-- Debezium CDC replication user
+CREATE USER debezium WITH REPLICATION LOGIN PASSWORD 'debezium';
+
+GRANT CONNECT ON DATABASE mediq_users TO debezium;
+GRANT CONNECT ON DATABASE mediq_doctors TO debezium;
+GRANT CONNECT ON DATABASE mediq_appointments TO debezium;
+GRANT CONNECT ON DATABASE mediq_payments TO debezium;
+GRANT CONNECT ON DATABASE mediq_emr TO debezium;

@@ -168,6 +168,8 @@ public class UserService {
             UserOutboxEntity outbox = new UserOutboxEntity();
             outbox.setAggregateId(event.userId());
             outbox.setEventType(event.eventType());
+            outbox.setDestination("mediq.user.events");
+            outbox.setTimestamp(java.time.Instant.now().toEpochMilli());
             outbox.setPayload(objectMapper.writeValueAsString(event));
             outboxRepository.save(outbox);
         } catch (JsonProcessingException e) {

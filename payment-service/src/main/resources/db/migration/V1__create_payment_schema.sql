@@ -29,3 +29,17 @@ CREATE UNIQUE INDEX idx_payment_appointment_unique ON payment(appointment_id);
 
 CREATE INDEX idx_payment_stripe_intent  ON payment(stripe_payment_intent_id);
 CREATE INDEX idx_payment_status         ON payment(status);
+
+CREATE TABLE mediq_payments.service_outbox (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    aggregate_id    VARCHAR(255) NOT NULL,
+    aggregate_type  VARCHAR(100) NOT NULL,
+    event_type      VARCHAR(100) NOT NULL,
+    destination     VARCHAR(255) NOT NULL,
+    payload         JSONB NOT NULL,
+    timestamp       BIGINT NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_payment_outbox_created_at ON mediq_payments.service_outbox(created_at);
+GRANT SELECT ON mediq_payments.service_outbox TO debezium;
+GRANT USAGE ON SCHEMA mediq_payments TO debezium;

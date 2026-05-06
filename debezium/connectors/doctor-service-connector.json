@@ -1,0 +1,29 @@
+{
+    "name": "mediq-doctor-outbox-connector",
+    "config": {
+        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+        "tasks.max": "1",
+        "database.hostname": "postgres",
+        "database.port": "5432",
+        "database.user": "debezium",
+        "database.password": "debezium",
+        "database.dbname": "mediq_doctors",
+        "table.include.list": "mediq_doctors.service_outbox",
+        "plugin.name": "pgoutput",
+        "slot.name": "mediq_doctor_outbox_slot",
+        "publication.name": "mediq_doctor_outbox_pub",
+        "transforms": "outbox",
+        "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+        "transforms.outbox.route.by.field": "destination",
+        "transforms.outbox.route.topic.replacement": "${routedByValue}",
+        "transforms.outbox.table.field.event.key": "aggregate_id",
+        "transforms.outbox.table.field.event.payload": "payload",
+        "transforms.outbox.table.field.event.timestamp": "timestamp",
+        "tombstones.on.delete": "false",
+        "heartbeat.interval.ms": "5000",
+        "snapshot.mode": "when_needed",
+        "slot.drop.on.stop": "false",
+        "offset.flush.interval.ms": "5000",
+        "topic.prefix": "mediq-doctors-db"
+    }
+}
