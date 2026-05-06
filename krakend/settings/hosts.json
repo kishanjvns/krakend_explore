@@ -1,12 +1,13 @@
 {
-  "user_service":         ["http://user-service:8081"],
-  "patient_service":      ["http://user-service:8081"],
-  "referral_service":     ["http://referral-service:8082"],
-  "doctor_service":       ["http://doctor-service:8083"],
-  "appointment_service":  ["http://appointment-service:8084"],
-  "emr_service":          ["http://emr-service:8086"],
-  "analytics_service":    ["http://analytics-service:8087"],
-  "payment_service":      ["http://payment-service:8089"],
-  "keycloak_internal":    "http://keycloak:8090",
-  "keycloak_external":    "http://localhost:8090"
+  "user_service":          ["http://user-service:8081"],
+  "patient_service":       ["http://user-service:8081"],
+  "referral_service":      ["http://referral-service:8082"],
+  "doctor_service":        ["http://doctor-service:8083"],
+  "appointment_service":   ["http://appointment-service:8084"],
+  "notification_service":  ["http://notification-service:8085"],
+  "emr_service":           ["http://emr-service:8086"],
+  "analytics_service":     ["http://analytics-service:8087"],
+  "payment_service":       ["http://payment-service:8089"],
+  "keycloak_internal":     "http://keycloak:8090",
+  "keycloak_external":     "http://localhost:8090"
 }

@@ -10,10 +10,10 @@
   },
   "backend": [
     {
-      "url_pattern": "/patients/{id}",
-      "host": ["{{ .hosts.patient_service }}"],
+      "url_pattern": "/users/{id}",
+      "host": ["{{ .hosts.user_service }}"],
       "encoding": "json",
-      "allow": ["id","name","age","diagnosis","assignedDoctor","status","isActive"],
+      "allow": ["id", "firstName", "lastName", "userType", "active", "verified"],
       "extra_config": {
         {{ template "rate_limit_proxy.tmpl" . }},
         {{ template "circuit_breaker.tmpl" . }}
@@ -31,46 +31,4 @@
       }
     }
   ]
-},
-{
-  "endpoint": "/api/v1/patients",
-  "method": "GET",
-  "output_encoding": "no-op",
-  "backend": [{
-    "url_pattern": "/patients",
-    "host": ["{{ .hosts.patient_service }}"],
-    "encoding": "no-op"
-  }]
-},
-{
-  "endpoint": "/api/v1/patients/status/{status}",
-  "method": "GET",
-  "output_encoding": "no-op",
-  "backend": [{
-    "url_pattern": "/patients/status/{status}",
-    "host": ["{{ .hosts.patient_service }}"],
-    "encoding": "no-op"
-  }]
-},
-{
-  "endpoint": "/api/v1/patients/active",
-  "method": "GET",
-  "output_encoding": "no-op",
-  "backend": [{
-    "url_pattern": "/patients/active",
-    "host": ["{{ .hosts.patient_service }}"],
-    "encoding": "no-op"
-  }]
-},
-{
-  "endpoint": "/api/v1/patients/{id}",
-  "method": "GET",
-  "extra_config": {
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
-  },
-  "backend": [{
-    "url_pattern": "/patients/{id}",
-    "host": ["{{ .hosts.patient_service }}"],
-    "encoding": "json"
-  }]
 }
