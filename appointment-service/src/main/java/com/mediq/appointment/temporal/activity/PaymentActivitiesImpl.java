@@ -1,5 +1,6 @@
 package com.mediq.appointment.temporal.activity;
 
+import io.temporal.activity.Activity;
 import io.temporal.spring.boot.ActivityImpl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -26,11 +27,15 @@ public class PaymentActivitiesImpl implements PaymentActivities {
     public String createPaymentIntent(String appointmentId,
                                       String patientId,
                                       BigDecimal amount) {
+        // Pass workflowId so payment-service can signal back to this workflow
+        String workflowId = Activity.getExecutionContext().getInfo().getWorkflowId();
+
         Map<String, Object> request = Map.of(
             "appointmentId", appointmentId,
             "patientId", patientId,
             "amount", amount,
-            "currency", "inr"
+            "currency", "inr",
+            "temporalWorkflowId", workflowId
         );
 
         @SuppressWarnings("unchecked")
