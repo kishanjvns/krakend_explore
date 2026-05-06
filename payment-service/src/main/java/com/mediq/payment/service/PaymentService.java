@@ -1,6 +1,7 @@
 package com.mediq.payment.service;
 
 import com.mediq.payment.config.AppointmentBookingWorkflowSignal;
+import com.mediq.payment.event.PaymentNotificationEvent;
 import com.mediq.payment.model.PaymentEntity;
 import com.mediq.payment.model.PaymentStatus;
 import com.mediq.payment.repository.PaymentRepository;
@@ -13,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,15 +29,21 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final WorkflowClient workflowClient;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final String currency;
+    private final String paymentEventsTopic;
 
     public PaymentService(
             PaymentRepository paymentRepository,
             WorkflowClient workflowClient,
-            @Value("${stripe.currency}") String currency) {
+            KafkaTemplate<String, Object> kafkaTemplate,
+            @Value("${stripe.currency}") String currency,
+            @Value("${mediq.kafka.topic.payment-events}") String paymentEventsTopic) {
         this.paymentRepository = paymentRepository;
         this.workflowClient = workflowClient;
+        this.kafkaTemplate = kafkaTemplate;
         this.currency = currency;
+        this.paymentEventsTopic = paymentEventsTopic;
     }
 
     @Transactional
@@ -168,7 +176,25 @@ public class PaymentService {
                     paymentIntentId, payment.getAppointmentId(), success);
 
                 sendTemporalSignal(payment.getTemporalWorkflowId(), paymentIntentId, success);
+                publishPaymentEvent(payment, success, failureReason);
             });
+    }
+
+    private void publishPaymentEvent(PaymentEntity payment, boolean success,
+                                      String failureReason) {
+        try {
+            String appointmentId = payment.getAppointmentId().toString();
+            String patientId = payment.getPatientId().toString();
+            String amount = payment.getAmount().toPlainString();
+            PaymentNotificationEvent event = success
+                ? PaymentNotificationEvent.succeeded(appointmentId, patientId, amount, currency)
+                : PaymentNotificationEvent.failed(appointmentId, patientId, amount, currency, failureReason);
+            kafkaTemplate.send(paymentEventsTopic, appointmentId, event);
+            log.info("PaymentNotificationEvent published → appointmentId={} success={}",
+                appointmentId, success);
+        } catch (Exception e) {
+            log.error("Failed to publish payment notification event: {}", e.getMessage());
+        }
     }
 
     private void sendTemporalSignal(String workflowId, String paymentIntentId,

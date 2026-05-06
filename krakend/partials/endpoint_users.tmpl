@@ -90,4 +90,32 @@
       {{ template "circuit_breaker.tmpl" . }}
     }
   }]
+},
+{
+  "endpoint": "/api/v1/users/{userId}/send-otp",
+  "method": "POST",
+  "output_encoding": "json",
+  "backend": [{
+    "url_pattern": "/users/{userId}/send-otp",
+    "host": ["{{ .hosts.user_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/users/{userId}/verify-otp",
+  "method": "POST",
+  "output_encoding": "json",
+  "backend": [{
+    "url_pattern": "/users/{userId}/verify-otp",
+    "host": ["{{ .hosts.user_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
 }

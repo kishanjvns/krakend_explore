@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>mediq — Appointment Cancelled</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; }
+        .container { max-width: 600px; margin: 40px auto; background: white;
+                     border-radius: 8px; padding: 40px; }
+        .header { background: #f59e0b; color: white; padding: 20px;
+                  border-radius: 8px 8px 0 0; text-align: center; }
+        .detail-box { background: #fffbeb; border-left: 4px solid #f59e0b;
+                      padding: 20px; border-radius: 4px; margin: 20px 0; }
+        .footer { color: #6b7280; font-size: 12px; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>Appointment Cancelled</h1></div>
+    <p>Dear <span th:text="${recipientName}">User</span>,</p>
+    <p th:text="${message}">Your appointment has been cancelled.</p>
+    <div class="detail-box">
+        <p th:if="${doctorName}"><strong>Doctor:</strong> <span th:text="${doctorName}">Dr. X</span></p>
+        <p th:if="${patientName}"><strong>Patient:</strong> <span th:text="${patientName}">Patient X</span></p>
+        <p th:if="${appointmentDate}"><strong>Date:</strong> <span th:text="${appointmentDate}">Jan 15, 2024</span></p>
+        <p><strong>Reason:</strong> <span th:text="${reason}">Payment not completed</span></p>
+    </div>
+    <p>Please contact us if you have any questions.</p>
+    <div class="footer">&copy; 2024 mediq Healthcare</div>
+</div>
+</body>
+</html>

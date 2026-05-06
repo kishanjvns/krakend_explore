@@ -27,6 +27,10 @@ public class AppointmentEventConsumer {
             switch (event.eventType()) {
                 case "AppointmentConfirmed" -> notificationService.sendAppointmentConfirmation(event, idempotencyKey);
                 case "AppointmentCancelled" -> notificationService.sendCancellationNotice(event, idempotencyKey);
+                case "AppointmentAutoCalculated" ->
+                    notificationService.sendAppointmentAutoCancelled(
+                        event.appointmentId(),
+                        "Payment not completed within 24 hours");
                 default -> log.debug("No notification handler for: {}", event.eventType());
             }
             ack.acknowledge();

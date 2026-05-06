@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>mediq — OTP Verification</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
+        .container { max-width: 600px; margin: 40px auto; background: white;
+                     border-radius: 8px; padding: 40px; }
+        .header { background: #2563eb; color: white; padding: 20px;
+                  border-radius: 8px 8px 0 0; text-align: center; }
+        .otp-box { font-size: 36px; font-weight: bold; letter-spacing: 8px;
+                   color: #2563eb; text-align: center; padding: 20px;
+                   background: #eff6ff; border-radius: 8px; margin: 20px 0; }
+        .footer { color: #6b7280; font-size: 12px; text-align: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>mediq Healthcare</h1></div>
+    <h2>Verify your account</h2>
+    <p>Hello <span th:text="${userName}">User</span>,</p>
+    <p>Your OTP for account verification is:</p>
+    <div class="otp-box" th:text="${otp}">483920</div>
+    <p>This OTP is valid for <strong th:text="${expiresIn}">5</strong> minutes.</p>
+    <p>If you did not request this, please ignore this email.</p>
+    <div class="footer">&copy; 2024 mediq Healthcare. Do not reply to this email.</div>
+</div>
+</body>
+</html>
