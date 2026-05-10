@@ -1,0 +1,4 @@
+apiVersion: v2
+name: mediq-frontend
+description: mediq Frontend SPA
+version: 0.1.0

@@ -19,6 +19,10 @@ data:
     {{- .Files.Get "config/partials/auth_doctor_admin.tmpl" | nindent 4 }}
   auth_doctor_nurse_admin.tmpl: |
     {{- .Files.Get "config/partials/auth_doctor_nurse_admin.tmpl" | nindent 4 }}
+  auth_any_role.tmpl: |
+    {{- .Files.Get "config/partials/auth_any_role.tmpl" | nindent 4 }}
+  endpoint_auth.tmpl: |
+    {{- .Files.Get "config/partials/endpoint_auth.tmpl" | nindent 4 }}
   circuit_breaker.tmpl: |
     {{- .Files.Get "config/partials/circuit_breaker.tmpl" | nindent 4 }}
   endpoint_users.tmpl: |

@@ -28,6 +28,10 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
 
         <!-- JPA + Hibernate -->
         <dependency>
@@ -106,7 +110,7 @@
         <!-- Temporal Spring Boot starter -->
         <dependency>
             <groupId>io.temporal</groupId>
-            <artifactId>temporal-spring-boot-starter-alpha</artifactId>
+            <artifactId>temporal-spring-boot-starter</artifactId>
             <version>1.24.1</version>
         </dependency>
 

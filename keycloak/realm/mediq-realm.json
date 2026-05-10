@@ -6,33 +6,129 @@
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
-  "accessTokenLifespan": 3600,
+  "accessTokenLifespan": 300,
   "defaultSignatureAlgorithm": "RS256",
 
   "roles": {
     "realm": [
-      { "name": "DOCTOR",  "description": "Clinical doctor with full patient access" },
-      { "name": "NURSE",   "description": "Nursing staff with limited access" },
-      { "name": "ADMIN",   "description": "System administrator" },
-      { "name": "PATIENT", "description": "Patient self-service access" }
+      {
+        "name": "PATIENT",
+        "description": "Registered patient",
+        "composite": false,
+        "attributes": {
+          "permissions": [
+            "READ_OWN_PROFILE",
+            "WRITE_OWN_PROFILE",
+            "READ_DOCTORS",
+            "READ_DOCTOR_AVAILABILITY",
+            "WRITE_OWN_APPOINTMENT",
+            "READ_OWN_APPOINTMENT",
+            "CANCEL_OWN_APPOINTMENT",
+            "READ_OWN_NOTIFICATIONS",
+            "SEND_OTP",
+            "VERIFY_OTP"
+          ]
+        }
+      },
+      {
+        "name": "DOCTOR",
+        "description": "Verified doctor",
+        "composite": false,
+        "attributes": {
+          "permissions": [
+            "READ_OWN_PROFILE",
+            "WRITE_OWN_PROFILE",
+            "READ_PATIENT_PROFILE",
+            "READ_OWN_APPOINTMENT",
+            "WRITE_APPOINTMENT_SLOT",
+            "CONFIRM_APPOINTMENT",
+            "CANCEL_APPOINTMENT",
+            "READ_EMR",
+            "WRITE_EMR",
+            "READ_OWN_ANALYTICS",
+            "READ_OWN_NOTIFICATIONS"
+          ]
+        }
+      },
+      {
+        "name": "NURSE",
+        "description": "Clinical staff",
+        "composite": false,
+        "attributes": {
+          "permissions": [
+            "READ_OWN_PROFILE",
+            "READ_PATIENT_PROFILE",
+            "READ_OWN_APPOINTMENT",
+            "WRITE_OWN_APPOINTMENT",
+            "CANCEL_APPOINTMENT",
+            "READ_EMR",
+            "READ_OWN_NOTIFICATIONS"
+          ]
+        }
+      },
+      {
+        "name": "ADMIN",
+        "description": "Platform administrator",
+        "composite": false,
+        "attributes": {
+          "permissions": [
+            "READ_OWN_PROFILE",
+            "READ_ANY_PROFILE",
+            "WRITE_ANY_PROFILE",
+            "VERIFY_DOCTOR",
+            "DEACTIVATE_USER",
+            "READ_DOCTORS",
+            "READ_PATIENT_PROFILE",
+            "READ_OWN_APPOINTMENT",
+            "READ_ANY_APPOINTMENT",
+            "CANCEL_ANY_APPOINTMENT",
+            "WRITE_APPOINTMENT_SLOT",
+            "READ_EMR",
+            "WRITE_EMR",
+            "READ_ANALYTICS",
+            "READ_ANY_NOTIFICATIONS",
+            "MANAGE_ROLES",
+            "SEND_OTP",
+            "VERIFY_OTP"
+          ]
+        }
+      }
     ]
   },
 
   "clients": [
     {
-      "clientId": "mediq-gateway",
+      "clientId": "mediq-frontend-spa",
+      "name": "mediq Angular SPA",
+      "description": "Public OAuth2 client for Angular frontend - Authorization Code + PKCE",
       "enabled": true,
-      "publicClient": false,
-      "secret": "mediq-secret-local",
-      "directAccessGrantsEnabled": true,
+      "publicClient": true,
       "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
-      "redirectUris": ["http://localhost:8080/*"],
-      "webOrigins": ["http://localhost:8080"],
-      "defaultClientScopes": ["openid", "profile", "email", "roles"],
+      "redirectUris": [
+        "http://localhost:4200/*",
+        "http://localhost:4200/silent-refresh.html"
+      ],
+      "webOrigins": [
+        "http://localhost:4200"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "access.token.lifespan": "300",
+        "post.logout.redirect.uris": "http://localhost:4200/"
+      },
+      "defaultClientScopes": [
+        "openid",
+        "profile",
+        "email",
+        "roles"
+      ],
       "protocolMappers": [
         {
-          "name": "realm-roles-mapper",
+          "name": "role-mapper",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-usermodel-realm-role-mapper",
           "consentRequired": false,
@@ -44,6 +140,50 @@
             "claim.name": "role",
             "jsonType.label": "String"
           }
+        },
+        {
+          "name": "permissions-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "permissions",
+            "user.attribute": "permissions",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "userId-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "userId",
+            "user.attribute": "userId",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "userType-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "userType",
+            "user.attribute": "userType",
+            "jsonType.label": "String"
+          }
         }
       ]
     }
@@ -51,52 +191,110 @@
 
   "users": [
     {
+      "username": "testpatient",
+      "email": "testpatient@mediq.com",
+      "firstName": "Test",
+      "lastName": "Patient",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{"type": "password", "value": "Test@1234", "temporary": false}],
+      "realmRoles": ["PATIENT"],
+      "attributes": {
+        "userType": ["PATIENT"],
+        "permissions": [
+          "READ_OWN_PROFILE",
+          "WRITE_OWN_PROFILE",
+          "READ_DOCTORS",
+          "READ_DOCTOR_AVAILABILITY",
+          "WRITE_OWN_APPOINTMENT",
+          "READ_OWN_APPOINTMENT",
+          "CANCEL_OWN_APPOINTMENT",
+          "READ_OWN_NOTIFICATIONS",
+          "SEND_OTP",
+          "VERIFY_OTP"
+        ]
+      }
+    },
+    {
       "username": "dr.mehta",
       "email": "dr.mehta@mediq.com",
-      "firstName": "Raj",
+      "firstName": "Arjun",
       "lastName": "Mehta",
       "enabled": true,
       "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "doctor123",
-          "temporary": false
-        }
-      ],
-      "realmRoles": ["DOCTOR"]
+      "credentials": [{"type": "password", "value": "Test@1234", "temporary": false}],
+      "realmRoles": ["DOCTOR"],
+      "attributes": {
+        "userType": ["DOCTOR"],
+        "permissions": [
+          "READ_OWN_PROFILE",
+          "WRITE_OWN_PROFILE",
+          "READ_PATIENT_PROFILE",
+          "READ_OWN_APPOINTMENT",
+          "WRITE_APPOINTMENT_SLOT",
+          "CONFIRM_APPOINTMENT",
+          "CANCEL_APPOINTMENT",
+          "READ_EMR",
+          "WRITE_EMR",
+          "READ_OWN_ANALYTICS",
+          "READ_OWN_NOTIFICATIONS"
+        ]
+      }
     },
     {
       "username": "nurse.priya",
-      "email": "priya@mediq.com",
+      "email": "nurse.priya@mediq.com",
       "firstName": "Priya",
-      "lastName": "Verma",
+      "lastName": "Sharma",
       "enabled": true,
       "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "nurse123",
-          "temporary": false
-        }
-      ],
-      "realmRoles": ["NURSE"]
+      "credentials": [{"type": "password", "value": "Test@1234", "temporary": false}],
+      "realmRoles": ["NURSE"],
+      "attributes": {
+        "userType": ["NURSE"],
+        "permissions": [
+          "READ_OWN_PROFILE",
+          "READ_PATIENT_PROFILE",
+          "READ_OWN_APPOINTMENT",
+          "WRITE_OWN_APPOINTMENT",
+          "CANCEL_APPOINTMENT",
+          "READ_EMR",
+          "READ_OWN_NOTIFICATIONS"
+        ]
+      }
     },
     {
       "username": "admin",
       "email": "admin@mediq.com",
-      "firstName": "System",
+      "firstName": "Platform",
       "lastName": "Admin",
       "enabled": true,
       "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "admin123",
-          "temporary": false
-        }
-      ],
-      "realmRoles": ["ADMIN"]
+      "credentials": [{"type": "password", "value": "Test@1234", "temporary": false}],
+      "realmRoles": ["ADMIN"],
+      "attributes": {
+        "userType": ["ADMIN"],
+        "permissions": [
+          "READ_OWN_PROFILE",
+          "READ_ANY_PROFILE",
+          "WRITE_ANY_PROFILE",
+          "VERIFY_DOCTOR",
+          "DEACTIVATE_USER",
+          "READ_DOCTORS",
+          "READ_PATIENT_PROFILE",
+          "READ_OWN_APPOINTMENT",
+          "READ_ANY_APPOINTMENT",
+          "CANCEL_ANY_APPOINTMENT",
+          "WRITE_APPOINTMENT_SLOT",
+          "READ_EMR",
+          "WRITE_EMR",
+          "READ_ANALYTICS",
+          "READ_ANY_NOTIFICATIONS",
+          "MANAGE_ROLES",
+          "SEND_OTP",
+          "VERIFY_OTP"
+        ]
+      }
     }
   ]
 }

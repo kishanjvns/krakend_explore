@@ -115,7 +115,7 @@ public class OtpService {
             log.info("User verified successfully → userId={}", userId);
         });
 
-        return OtpVerificationResult.success();
+        return OtpVerificationResult.successResult();
     }
 
     private String generateOtp() {

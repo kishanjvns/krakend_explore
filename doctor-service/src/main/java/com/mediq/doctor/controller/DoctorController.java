@@ -8,6 +8,7 @@ import com.mediq.doctor.model.DoctorAvailabilityEntity;
 import com.mediq.doctor.repository.DoctorAvailabilityRepository;
 import com.mediq.doctor.service.DoctorService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,11 +35,13 @@ public class DoctorController {
     }
 
     @GetMapping("/{doctorId}")
+    @PreAuthorize("hasRole('DOCTOR') or hasRole('ADMIN') or hasRole('NURSE')")
     public ResponseEntity<DoctorProfileResponse> getDoctorProfile(@PathVariable UUID doctorId) {
         return ResponseEntity.ok(doctorService.getDoctorProfile(doctorId));
     }
 
     @PostMapping("/{doctorId}/specializations")
+    @PreAuthorize("(hasRole('DOCTOR') and #doctorId.toString() == authentication.principal) or hasRole('ADMIN')")
     public ResponseEntity<Void> addSpecialization(@PathVariable UUID doctorId,
                                                    @RequestBody AddSpecializationRequest request) {
         doctorService.addSpecialization(doctorId, request);
@@ -46,6 +49,7 @@ public class DoctorController {
     }
 
     @PostMapping("/{doctorId}/availability")
+    @PreAuthorize("(hasRole('DOCTOR') and #doctorId.toString() == authentication.principal) or hasRole('ADMIN')")
     public ResponseEntity<Void> setAvailability(@PathVariable UUID doctorId,
                                                  @RequestBody SetAvailabilityRequest request) {
         doctorService.setAvailability(doctorId, request);

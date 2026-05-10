@@ -30,3 +30,6 @@ helmfiles:
   - path: helmfile.d/05-gateway.yaml
     needs:
       - helmfile.d/02-platform.yaml
+  - path: helmfile.d/06-frontend.yaml
+    needs:
+      - helmfile.d/05-gateway.yaml

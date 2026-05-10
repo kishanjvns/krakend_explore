@@ -8,6 +8,7 @@ import com.mediq.emr.service.EmrService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -24,6 +25,7 @@ public class EmrController {
     }
 
     @PostMapping("/events/{eventType}")
+    @PreAuthorize("hasAuthority('WRITE_EMR')")
     public ResponseEntity<PatientEventEntity> recordEvent(
             @PathVariable String patientId,
             @PathVariable EmrEventType eventType,
@@ -36,16 +38,19 @@ public class EmrController {
     }
 
     @GetMapping("/current")
+    @PreAuthorize("hasAuthority('READ_EMR')")
     public ResponseEntity<PatientSummaryEntity> getCurrentState(@PathVariable String patientId) {
         return ResponseEntity.ok(emrService.getCurrentState(patientId));
     }
 
     @GetMapping("/history")
+    @PreAuthorize("hasAuthority('READ_EMR')")
     public ResponseEntity<List<PatientEventEntity>> getHistory(@PathVariable String patientId) {
         return ResponseEntity.ok(emrService.getHistory(patientId));
     }
 
     @GetMapping("/as-of")
+    @PreAuthorize("hasAuthority('READ_EMR')")
     public ResponseEntity<PatientSummaryEntity> getStateAsOf(
             @PathVariable String patientId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {

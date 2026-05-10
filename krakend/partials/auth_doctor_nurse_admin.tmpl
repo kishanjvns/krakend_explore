@@ -8,9 +8,13 @@
   "roles_key": "role",
   "roles": ["DOCTOR", "NURSE", "ADMIN"],
   "propagate_claims": [
-    ["sub",   "X-User-Id"],
-    ["email", "X-User-Email"],
-    ["role",  "X-User-Role"],
-    ["name",  "X-User-Name"]
+    ["sub",         "X-Keycloak-Id"],
+    ["userId",      "X-User-Id"],
+    ["email",       "X-User-Email"],
+    ["role",        "X-User-Role"],
+    ["userType",    "X-User-Type"],
+    ["permissions", "X-User-Permissions"],
+    ["jti",         "X-Token-Jti"],
+    ["exp",         "X-Token-Exp"]
   ]
 }
