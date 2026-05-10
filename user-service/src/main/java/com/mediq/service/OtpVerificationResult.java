@@ -5,7 +5,7 @@ public record OtpVerificationResult(
         String status,
         String message
 ) {
-    public static OtpVerificationResult success() {
+    public static OtpVerificationResult successResult() {
         return new OtpVerificationResult(true, "SUCCESS",
             "OTP verified successfully. Account activated.");
     }

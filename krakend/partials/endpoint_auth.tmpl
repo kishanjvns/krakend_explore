@@ -1,0 +1,33 @@
+{
+  "endpoint": "/api/v1/auth/me",
+  "method": "GET",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
+    {{ template "auth_any_role.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/auth/me",
+    "host": ["{{ .hosts.user_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/auth/logout",
+  "method": "POST",
+  "extra_config": {
+    {{ template "auth_any_role.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/auth/logout",
+    "host": ["{{ .hosts.user_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+}

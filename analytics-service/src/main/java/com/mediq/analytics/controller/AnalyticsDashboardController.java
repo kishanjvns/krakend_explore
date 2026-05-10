@@ -8,6 +8,7 @@ import com.mediq.analytics.repository.DoctorPerformanceSummaryRepository;
 import com.mediq.analytics.repository.PlatformMetricRepository;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -32,6 +33,7 @@ public class AnalyticsDashboardController {
     }
 
     @GetMapping("/dashboard")
+    @PreAuthorize("hasAuthority('READ_ANALYTICS') or hasAuthority('READ_OWN_ANALYTICS')")
     public ResponseEntity<Map<String, Object>> getDashboard() {
         List<PlatformMetricEntity> metrics = metricRepo.findAll();
         Map<String, Long> metricsMap = new HashMap<>();
@@ -57,6 +59,7 @@ public class AnalyticsDashboardController {
     }
 
     @GetMapping("/appointments/daily")
+    @PreAuthorize("hasAuthority('READ_ANALYTICS')")
     public ResponseEntity<List<DailyAppointmentSummaryEntity>> getDailyAppointments(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
@@ -67,6 +70,7 @@ public class AnalyticsDashboardController {
     }
 
     @GetMapping("/doctors/performance")
+    @PreAuthorize("hasAuthority('READ_ANALYTICS') or hasAuthority('READ_OWN_ANALYTICS')")
     public ResponseEntity<List<DoctorPerformanceSummaryEntity>> getDoctorPerformance(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 

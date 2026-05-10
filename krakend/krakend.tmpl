@@ -10,6 +10,20 @@
     "router": {
       "return_error_msg": true
     },
+    "security/cors": {
+      "allow_origins": ["http://localhost:4200"],
+      "allow_methods": ["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"],
+      "allow_headers": [
+        "Origin",
+        "Content-Type",
+        "Authorization",
+        "Accept",
+        "X-Requested-With"
+      ],
+      "expose_headers": ["Content-Length"],
+      "allow_credentials": true,
+      "max_age": "12h"
+    },
     "telemetry/opentelemetry": {
       "service_name": "mediq-krakend",
       "service_version": "1.0.0",
@@ -56,6 +70,7 @@
   },
 
   "endpoints": [
+    {{ template "endpoint_auth.tmpl" . }},
     {{ template "endpoint_users.tmpl" . }},
     {{ template "endpoint_patients.tmpl" . }},
     {{ template "endpoint_referrals.tmpl" . }},

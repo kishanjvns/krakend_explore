@@ -14,6 +14,7 @@ import io.temporal.client.WorkflowOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -43,6 +44,7 @@ public class AppointmentController {
     }
 
     @PostMapping("/appointments")
+    @PreAuthorize("hasAuthority('WRITE_OWN_APPOINTMENT') or hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> bookAppointment(
             @RequestBody BookAppointmentRequest request,
             @RequestHeader(value = "X-User-Id", required = false) String userId,
@@ -53,7 +55,6 @@ public class AppointmentController {
             : (userId != null ? UUID.fromString(userId) : null);
 
         UUID doctorId = request.doctorId();
-        // Fall back to slot's doctorId if not provided in request
         if (doctorId == null && request.slotId() != null) {
             doctorId = slotRepository.findById(request.slotId())
                 .map(AppointmentSlotEntity::getDoctorId)
@@ -88,6 +89,7 @@ public class AppointmentController {
     }
 
     @GetMapping("/appointments/{workflowId}/status")
+    @PreAuthorize("hasAuthority('READ_OWN_APPOINTMENT') or hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> getBookingStatus(
             @PathVariable String workflowId) {
         AppointmentBookingWorkflow workflow = workflowClient.newWorkflowStub(
@@ -99,18 +101,21 @@ public class AppointmentController {
     }
 
     @GetMapping("/appointments/{appointmentId}")
+    @PreAuthorize("hasAuthority('READ_OWN_APPOINTMENT') or hasRole('ADMIN')")
     public ResponseEntity<AppointmentResponse> getAppointment(
             @PathVariable UUID appointmentId) {
         return ResponseEntity.ok(appointmentService.getAppointment(appointmentId));
     }
 
     @PutMapping("/appointments/{appointmentId}/confirm")
+    @PreAuthorize("hasAuthority('CONFIRM_APPOINTMENT') or hasRole('ADMIN')")
     public ResponseEntity<AppointmentResponse> confirmAppointment(
             @PathVariable UUID appointmentId) {
         return ResponseEntity.ok(appointmentService.confirmAppointment(appointmentId));
     }
 
     @PutMapping("/appointments/{appointmentId}/cancel")
+    @PreAuthorize("hasAuthority('CANCEL_OWN_APPOINTMENT') or hasAuthority('CANCEL_APPOINTMENT') or hasRole('ADMIN')")
     public ResponseEntity<AppointmentResponse> cancelAppointment(
             @PathVariable UUID appointmentId,
             @RequestBody(required = false) Map<String, String> body) {
@@ -119,11 +124,13 @@ public class AppointmentController {
     }
 
     @PostMapping("/slots")
+    @PreAuthorize("hasAuthority('WRITE_APPOINTMENT_SLOT') or hasRole('ADMIN')")
     public ResponseEntity<SlotResponse> createSlot(@RequestBody CreateSlotRequest request) {
         return ResponseEntity.ok(appointmentService.createSlot(request));
     }
 
     @GetMapping("/slots")
+    @PreAuthorize("hasAuthority('READ_OWN_APPOINTMENT') or hasRole('ADMIN')")
     public ResponseEntity<List<AppointmentSlotEntity>> getSlots(
             @RequestParam UUID doctorId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {

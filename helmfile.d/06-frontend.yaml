@@ -1,0 +1,8 @@
+releases:
+  - name: mediq-frontend
+    chart: ./helm/services/frontend
+    namespace: mediq
+    needs:
+      - mediq/mediq-krakend
+    values:
+      - ./helm/services/frontend/values.yaml

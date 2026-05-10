@@ -1,0 +1,19 @@
+name: frontend
+replicaCount: 1
+image:
+  repository: mediq/frontend
+  tag: latest
+  pullPolicy: IfNotPresent
+port: 80
+resources:
+  requests:
+    memory: 64Mi
+    cpu: 50m
+  limits:
+    memory: 128Mi
+    cpu: 200m
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  cpuThreshold: 70
