@@ -27,11 +27,28 @@
   }]
 },
 {
+  "endpoint": "/api/v1/users/me",
+  "method": "GET",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
+    {{ template "auth_any_role.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/users/me",
+    "host": ["{{ .hosts.user_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
   "endpoint": "/api/v1/users/{userId}",
   "method": "GET",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "auth_any_role.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/users/{userId}",
@@ -47,7 +64,7 @@
   "endpoint": "/api/v1/users/{userId}",
   "method": "DELETE",
   "extra_config": {
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "auth_any_role.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/users/{userId}",

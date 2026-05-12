@@ -1,9 +1,27 @@
 {
   "endpoint": "/api/v1/appointments",
+  "method": "GET",
+  "input_query_strings": ["patientId", "doctorId"],
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 200, "capacity": 200 },
+    {{ template "auth_any_role.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/appointments",
+    "host": ["{{ .hosts.appointment_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/appointments",
   "method": "POST",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 100, "capacity": 100 },
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "auth_any_role.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/appointments",
@@ -20,7 +38,7 @@
   "method": "GET",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "auth_any_role.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/appointments/{appointmentId}",
@@ -33,10 +51,27 @@
   }]
 },
 {
+  "endpoint": "/api/v1/appointments/{appointmentId}/status",
+  "method": "GET",
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 200, "capacity": 200 },
+    {{ template "auth_any_role.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/appointments/{appointmentId}/status",
+    "host": ["{{ .hosts.appointment_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
   "endpoint": "/api/v1/appointments/{appointmentId}/confirm",
   "method": "PUT",
   "extra_config": {
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "auth_any_role.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/appointments/{appointmentId}/confirm",
@@ -52,7 +87,7 @@
   "endpoint": "/api/v1/appointments/{appointmentId}/cancel",
   "method": "PUT",
   "extra_config": {
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "auth_any_role.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/appointments/{appointmentId}/cancel",
@@ -66,9 +101,27 @@
 },
 {
   "endpoint": "/api/v1/slots",
+  "method": "GET",
+  "input_query_strings": ["doctorId", "date"],
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
+    {{ template "auth_any_role.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/slots",
+    "host": ["{{ .hosts.appointment_service }}"],
+    "encoding": "no-op",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/slots",
   "method": "POST",
   "extra_config": {
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "auth_any_role.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/slots",
@@ -85,7 +138,7 @@
   "method": "GET",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 100, "capacity": 100 },
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "auth_any_role.tmpl" . }}
   },
   "backend": [
     {

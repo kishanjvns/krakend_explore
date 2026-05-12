@@ -1,6 +1,7 @@
 {
   "endpoint": "/api/v1/doctors/search",
   "method": "GET",
+  "input_query_strings": ["specialization", "verified"],
   "output_encoding": "no-op",
   "backend": [{
     "url_pattern": "/doctors/search",
@@ -17,10 +18,26 @@
   "method": "GET",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "auth_any_role.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/doctors/{doctorId}",
+    "host": ["{{ .hosts.doctor_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{
+  "endpoint": "/api/v1/doctors/{doctorId}/specializations",
+  "method": "POST",
+  "extra_config": {
+    {{ template "auth_any_role.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/doctors/{doctorId}/specializations",
     "host": ["{{ .hosts.doctor_service }}"],
     "encoding": "json",
     "extra_config": {
@@ -44,17 +61,15 @@
   }]
 },
 {
-  "endpoint": "/api/v1/mobile/doctors/{doctorId}",
-  "method": "GET",
+  "endpoint": "/api/v1/doctors/{doctorId}/availability",
+  "method": "POST",
   "extra_config": {
-    "qos/ratelimit/router": { "max_rate": 500, "capacity": 500 },
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "auth_any_role.tmpl" . }}
   },
   "backend": [{
-    "url_pattern": "/doctors/{doctorId}",
+    "url_pattern": "/doctors/{doctorId}/availability",
     "host": ["{{ .hosts.doctor_service }}"],
     "encoding": "json",
-    "allow": ["doctorId", "fullName", "specializations", "verified", "averageRating"],
     "extra_config": {
       {{ template "rate_limit_proxy.tmpl" . }},
       {{ template "circuit_breaker.tmpl" . }}
@@ -66,7 +81,7 @@
   "method": "GET",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 200, "capacity": 200 },
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "auth_any_role.tmpl" . }}
   },
   "backend": [
     {

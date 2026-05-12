@@ -3,7 +3,7 @@
   "method": "GET",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 200, "capacity": 200 },
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "auth_any_role.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/notifications/user/{userId}",

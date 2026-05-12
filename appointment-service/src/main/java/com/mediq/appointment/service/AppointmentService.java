@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -115,6 +116,19 @@ public class AppointmentService {
         log.info("Slot created id={} doctorId={} date={}", slot.getId(), request.doctorId(), request.slotDate());
         return new SlotResponse(slot.getId(), slot.getDoctorId(), slot.getSlotDate(),
             slot.getStartTime(), slot.getEndTime(), slot.getStatus().name());
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppointmentResponse> listAppointments(UUID patientId, UUID doctorId) {
+        List<AppointmentEntity> list;
+        if (patientId != null) {
+            list = appointmentRepository.findByPatientId(patientId);
+        } else if (doctorId != null) {
+            list = appointmentRepository.findByDoctorId(doctorId);
+        } else {
+            list = List.of();
+        }
+        return list.stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)

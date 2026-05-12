@@ -88,6 +88,14 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    public UserResponse getUserByKeycloakId(String keycloakId) {
+        UserEntity user = userRepository.findByKeycloakId(keycloakId)
+            .orElseThrow(() -> new UserNotFoundException(
+                UUID.fromString("00000000-0000-0000-0000-000000000000")));
+        return userMapper.toResponse(user);
+    }
+
+    @Transactional(readOnly = true)
     public UserResponse getUserById(UUID userId) {
         UserResponse cached = cacheService.get(userId);
         if (cached != null) return cached;

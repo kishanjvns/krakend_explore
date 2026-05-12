@@ -1,14 +1,5 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { AuthService } from './auth/auth.service';
 
-@Component({
-  selector: 'app-root',
-  imports: [RouterOutlet],
-  templateUrl: './app.html',
-  styleUrl: './app.css',
-})
-export class App {
-  public authService = inject(AuthService);
-  protected readonly title = signal('mediq-frontend');
-}
+@Component({ selector: 'app-root', imports: [RouterOutlet], template: '<router-outlet/>' })
+export class App {}

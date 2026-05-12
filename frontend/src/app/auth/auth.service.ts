@@ -1,44 +1,66 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { OAuthService } from 'angular-oauth2-oidc';
 import { authConfig } from './auth.config';
+import { UserResponse } from '../core/models';
+import { API_BASE } from '../core/api.config';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class AuthService {
-  public identityClaims = signal<any>(null);
-  public isAuthenticated = signal<boolean>(false);
+  public isAuthenticated = signal(false);
+  public currentUser = signal<UserResponse | null>(null);
 
-  constructor(private oauthService: OAuthService) {
+  private oauthService = inject(OAuthService);
+  private router = inject(Router);
+  private http = inject(HttpClient);
+
+  constructor() {
     this.oauthService.configure(authConfig);
     this.oauthService.setupAutomaticSilentRefresh();
     this.oauthService.loadDiscoveryDocumentAndTryLogin().then(() => {
       if (this.oauthService.hasValidAccessToken()) {
         this.isAuthenticated.set(true);
-        this.identityClaims.set(this.oauthService.getIdentityClaims());
+        this.loadCurrentUser().then(() => this.router.navigate(['/dashboard']));
       }
     }).catch(err => console.error('OAuth Error:', err));
   }
 
-  public login() {
-    this.oauthService.initCodeFlow();
+  private async loadCurrentUser() {
+    try {
+      const user = await this.http.get<UserResponse>(`${API_BASE}/users/me`).toPromise();
+      this.currentUser.set(user ?? null);
+    } catch {
+      // seed users (dr.mehta etc.) won't have a user-service record — that's fine
+    }
+  }
+
+  public login() { this.oauthService.initCodeFlow(); }
+
+  public register() {
+    const issuer = authConfig.issuer!.replace(/\/$/, '');
+    const redirectUri = encodeURIComponent(window.location.origin);
+    window.location.href =
+      `${issuer}/protocol/openid-connect/registrations` +
+      `?client_id=${authConfig.clientId}&response_type=code&scope=openid&redirect_uri=${redirectUri}`;
   }
 
   public logout() {
     this.oauthService.logOut();
     this.isAuthenticated.set(false);
-    this.identityClaims.set(null);
+    this.currentUser.set(null);
+    this.router.navigate(['/']);
   }
 
-  public get userName(): string {
-    const claims = this.identityClaims();
-    if (!claims) return 'Guest';
-    return claims['name'] || claims['preferred_username'] || 'User';
-  }
+  public get claims(): any { return this.oauthService.getIdentityClaims() ?? {}; }
+  public get userName(): string { return this.claims['name'] || this.claims['preferred_username'] || 'User'; }
+  public get userEmail(): string { return this.claims['email'] || ''; }
+  public get role(): string { return this.claims['role'] || (this.claims['realm_access']?.roles?.[0]) || ''; }
+  public get userId(): string { return this.currentUser()?.id || this.claims['sub'] || ''; }
+  public get keycloakId(): string { return this.claims['sub'] || ''; }
+  public get doctorProfileId(): string { return this.currentUser()?.doctorProfile?.id || ''; }
 
-  public get userRoles(): string[] {
-    const claims = this.identityClaims();
-    if (!claims || !claims['realm_access']) return [];
-    return claims['realm_access']['roles'] || [];
-  }
+  public isPatient() { return this.role === 'PATIENT'; }
+  public isDoctor() { return this.role === 'DOCTOR'; }
+  public isAdmin() { return this.role === 'ADMIN'; }
 }

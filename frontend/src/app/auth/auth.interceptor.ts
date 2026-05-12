@@ -5,16 +5,12 @@ import { OAuthService } from 'angular-oauth2-oidc';
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const oauthService = inject(OAuthService);
   const token = oauthService.getAccessToken();
-  
-  // Attach the Bearer token to all API requests if it exists
-  if (token && req.url.startsWith('/api')) {
-    const authReq = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-    return next(authReq);
+
+  const isGateway = req.url.includes('localhost:8080/api') || req.url.startsWith('/api');
+
+  if (token && isGateway) {
+    return next(req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }));
   }
-  
+
   return next(req);
 };

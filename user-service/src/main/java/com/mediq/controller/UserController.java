@@ -112,6 +112,13 @@ public class UserController {
         ));
     }
 
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserResponse> getMe(
+            @RequestHeader("X-Keycloak-Id") String keycloakId) {
+        return ResponseEntity.ok(userService.getUserByKeycloakId(keycloakId));
+    }
+
     @GetMapping("/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("user-service UP");

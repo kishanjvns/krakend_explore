@@ -43,6 +43,15 @@ public class AppointmentController {
         this.taskQueue = taskQueue;
     }
 
+    @GetMapping("/appointments")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> listAppointments(
+            @RequestParam(required = false) UUID patientId,
+            @RequestParam(required = false) UUID doctorId) {
+        List<AppointmentResponse> items = appointmentService.listAppointments(patientId, doctorId);
+        return ResponseEntity.ok(Map.of("appointments", items));
+    }
+
     @PostMapping("/appointments")
     @PreAuthorize("hasAuthority('WRITE_OWN_APPOINTMENT') or hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> bookAppointment(
