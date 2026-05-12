@@ -2,3 +2,4 @@
 patient-service/target/*
 referral-service/target/*
 .env
+*/target/

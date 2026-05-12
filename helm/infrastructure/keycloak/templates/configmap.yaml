@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: keycloak-realm
-  namespace: mediq
+  namespace: {{ .Release.Namespace }}
 data:
   mediq-realm.json: |
     {{- .Files.Get "realm/mediq-realm.json" | nindent 4 }}

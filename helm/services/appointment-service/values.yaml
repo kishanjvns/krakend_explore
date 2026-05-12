@@ -11,6 +11,10 @@ env:
   DB_PASSWORD: mediq
   KAFKA_BOOTSTRAP_SERVERS: kafka-service:9092
   JAEGER_ENDPOINT: http://jaeger-service:4318/v1/traces
+  TEMPORAL_HOST: temporal-service
+  TEMPORAL_PORT: "7233"
+  MANAGEMENT_HEALTH_KAFKA_ENABLED: "false"
+  MANAGEMENT_HEALTH_REDIS_ENABLED: "false"
   ENVIRONMENT: kubernetes
   JAVA_OPTS: "-Xms128m -Xmx384m -XX:+UseG1GC"
 resources:

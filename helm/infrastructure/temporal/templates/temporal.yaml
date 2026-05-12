@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: temporal
-  namespace: mediq
+  namespace: {{ .Release.Namespace }}
   labels:
     app: temporal
 spec:
@@ -23,7 +23,7 @@ spec:
             - containerPort: {{ .Values.port }}
           env:
             - name: DB
-              value: postgresql
+              value: postgres12
             - name: DB_PORT
               value: "5432"
             - name: POSTGRES_USER
@@ -31,7 +31,7 @@ spec:
             - name: POSTGRES_PWD
               value: mediq
             - name: POSTGRES_SEEDS
-              value: mediq-postgres
+              value: postgres-service
           readinessProbe:
             tcpSocket:
               port: {{ .Values.port }}
@@ -47,7 +47,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: temporal-service
-  namespace: mediq
+  namespace: {{ .Release.Namespace }}
 spec:
   type: ClusterIP
   selector:
@@ -61,7 +61,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: temporal-ui
-  namespace: mediq
+  namespace: {{ .Release.Namespace }}
   labels:
     app: temporal-ui
 spec:
@@ -82,8 +82,8 @@ spec:
           env:
             - name: TEMPORAL_ADDRESS
               value: temporal-service:{{ .Values.port }}
-            - name: TEMPORAL_CORS_ORIGINS
-              value: "*"
+            - name: TEMPORAL_CSRF_COOKIE_INSECURE
+              value: "true"
           readinessProbe:
             httpGet:
               path: /
@@ -95,7 +95,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: temporal-ui-service
-  namespace: mediq
+  namespace: {{ .Release.Namespace }}
 spec:
   type: NodePort
   selector:

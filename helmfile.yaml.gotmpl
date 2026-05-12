@@ -1,0 +1,190 @@
+helmDefaults:
+  wait: true
+  waitForJobs: true
+  timeout: 600
+  recreatePods: false
+  force: false
+
+environments:
+  dev:
+    values:
+      - environments/dev.yaml
+  staging:
+    values:
+      - environments/staging.yaml
+  prod:
+    values:
+      - environments/prod.yaml
+
+---
+releases:
+  # ── 00 Namespace ──────────────────────────────────────────────────────────
+  - name: mediq-namespace
+    chart: ./helm/infrastructure/namespace
+    namespace: {{ .Environment.Values.namespace }}
+    createNamespace: true
+    values:
+      - namespace: {{ .Environment.Values.namespace }}
+
+  # ── 01 Infrastructure ─────────────────────────────────────────────────────
+  - name: mediq-postgres
+    chart: ./helm/infrastructure/postgres
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-namespace
+    values:
+      - ./helm/infrastructure/postgres/values.yaml
+    set:
+      - name: image
+        value: postgres:16-alpine
+      - name: username
+        value: mediq
+      - name: password
+        value: mediq
+      - name: storage
+        value: {{ .Environment.Values.postgres.storage }}
+
+  - name: mediq-redis
+    chart: ./helm/infrastructure/redis
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-namespace
+    values:
+      - ./helm/infrastructure/redis/values.yaml
+
+  - name: mediq-zookeeper
+    chart: ./helm/infrastructure/zookeeper
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-namespace
+    values:
+      - ./helm/infrastructure/zookeeper/values.yaml
+
+  - name: mediq-kafka
+    chart: ./helm/infrastructure/kafka
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-zookeeper
+    values:
+      - ./helm/infrastructure/kafka/values.yaml
+
+  - name: mediq-keycloak
+    chart: ./helm/infrastructure/keycloak
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-postgres
+    values:
+      - ./helm/infrastructure/keycloak/values.yaml
+
+  - name: mediq-jaeger
+    chart: ./helm/infrastructure/jaeger
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-namespace
+    values:
+      - ./helm/infrastructure/jaeger/values.yaml
+
+  - name: mediq-temporal
+    chart: ./helm/infrastructure/temporal
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-postgres
+    values:
+      - ./helm/infrastructure/temporal/values.yaml
+
+  # ── 02 Platform services ──────────────────────────────────────────────────
+  - name: mediq-user-service
+    chart: ./helm/services/user-service
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-postgres
+      - {{ .Environment.Values.namespace }}/mediq-redis
+      - {{ .Environment.Values.namespace }}/mediq-kafka
+      - {{ .Environment.Values.namespace }}/mediq-keycloak
+    values:
+      - ./helm/services/user-service/values.yaml
+
+  - name: mediq-doctor-service
+    chart: ./helm/services/doctor-service
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-postgres
+      - {{ .Environment.Values.namespace }}/mediq-kafka
+      - {{ .Environment.Values.namespace }}/mediq-user-service
+    values:
+      - ./helm/services/doctor-service/values.yaml
+
+  # ── 03 Core services ──────────────────────────────────────────────────────
+  - name: mediq-appointment-service
+    chart: ./helm/services/appointment-service
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-postgres
+      - {{ .Environment.Values.namespace }}/mediq-kafka
+      - {{ .Environment.Values.namespace }}/mediq-user-service
+      - {{ .Environment.Values.namespace }}/mediq-doctor-service
+    values:
+      - ./helm/services/appointment-service/values.yaml
+
+  - name: mediq-payment-service
+    chart: ./helm/services/payment-service
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-postgres
+      - {{ .Environment.Values.namespace }}/mediq-kafka
+      - {{ .Environment.Values.namespace }}/mediq-temporal
+    values:
+      - ./helm/services/payment-service/values.yaml
+
+  - name: mediq-notification-service
+    chart: ./helm/services/notification-service
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-postgres
+      - {{ .Environment.Values.namespace }}/mediq-kafka
+      - {{ .Environment.Values.namespace }}/mediq-appointment-service
+    values:
+      - ./helm/services/notification-service/values.yaml
+
+  # ── 04 Advanced services ──────────────────────────────────────────────────
+  - name: mediq-emr-service
+    chart: ./helm/services/emr-service
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-postgres
+      - {{ .Environment.Values.namespace }}/mediq-kafka
+      - {{ .Environment.Values.namespace }}/mediq-appointment-service
+    values:
+      - ./helm/services/emr-service/values.yaml
+
+  - name: mediq-analytics-service
+    chart: ./helm/services/analytics-service
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-postgres
+      - {{ .Environment.Values.namespace }}/mediq-kafka
+      - {{ .Environment.Values.namespace }}/mediq-user-service
+      - {{ .Environment.Values.namespace }}/mediq-appointment-service
+    values:
+      - ./helm/services/analytics-service/values.yaml
+
+  # ── 05 Gateway ────────────────────────────────────────────────────────────
+  - name: mediq-krakend
+    chart: ./helm/gateway/krakend
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-user-service
+      - {{ .Environment.Values.namespace }}/mediq-doctor-service
+      - {{ .Environment.Values.namespace }}/mediq-appointment-service
+      - {{ .Environment.Values.namespace }}/mediq-keycloak
+    values:
+      - ./helm/gateway/krakend/values.yaml
+
+  # ── 06 Frontend ───────────────────────────────────────────────────────────
+  - name: mediq-frontend
+    chart: ./helm/services/frontend
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-krakend
+    values:
+      - ./helm/services/frontend/values.yaml

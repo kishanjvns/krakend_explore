@@ -1,4 +1,4 @@
-# Future AWS EKS — production scale
+namespace: mediq-prod
 
 postgres:
   storage: 50Gi

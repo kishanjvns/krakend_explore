@@ -1,7 +1,7 @@
-namespace: mediq-dev
+namespace: mediq-staging
 
 postgres:
-  storage: 2Gi
+  storage: 5Gi
 
 userService:
   replicas: 1

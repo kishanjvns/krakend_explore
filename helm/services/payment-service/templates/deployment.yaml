@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Values.name }}
-  namespace: mediq
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Values.name }}
 spec:
@@ -51,6 +51,6 @@ spec:
             httpGet:
               path: /actuator/health
               port: {{ .Values.port }}
-            initialDelaySeconds: 10
-            periodSeconds: 5
-            failureThreshold: 24
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 30
