@@ -1,10 +1,10 @@
-{
+﻿{
   "endpoint": "/api/v1/payments/intent",
   "method": "POST",
   "output_encoding": "json",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 100, "capacity": 100 },
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/payments/intent",
@@ -22,7 +22,7 @@
   "output_encoding": "json",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/payments/{paymentId}",

@@ -56,6 +56,12 @@ import { API_BASE } from '../core/api.config';
             </div>
 
             <div>
+              <label class="block text-xs font-medium text-blue-200 mb-1">Date of birth</label>
+              <input name="dateOfBirth" type="date" [(ngModel)]="form.dateOfBirth" required
+                class="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 text-sm focus:outline-none focus:border-indigo-400 focus:bg-white/15 transition-colors [color-scheme:dark]"/>
+            </div>
+
+            <div>
               <label class="block text-xs font-medium text-blue-200 mb-1">Phone</label>
               <input name="phone" [(ngModel)]="form.phone"
                 class="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 text-sm focus:outline-none focus:border-indigo-400 focus:bg-white/15 transition-colors"
@@ -94,7 +100,7 @@ export class PatientRegisterComponent {
   private http = inject(HttpClient);
   private router = inject(Router);
 
-  form = { firstName: '', lastName: '', email: '', phone: '', password: '' };
+  form = { firstName: '', lastName: '', email: '', phone: '', dateOfBirth: '', password: '' };
   loading = signal(false);
   error = signal('');
 
@@ -114,9 +120,10 @@ export class PatientRegisterComponent {
     const payload = {
       firstName: this.form.firstName,
       lastName: this.form.lastName,
-      email: this.form.email,
+      dateOfBirth: this.form.dateOfBirth,
       password: this.form.password,
-      contacts
+      contacts,
+      addresses: []
     };
 
     this.http.post(`${API_BASE}/users/patients/register`, payload).subscribe({

@@ -1,9 +1,9 @@
-{
+﻿{
   "endpoint": "/api/v1/emr/patients/{patientId}/events/{eventType}",
   "method": "POST",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 50, "capacity": 50 },
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/emr/patients/{patientId}/events/{eventType}",
@@ -20,7 +20,7 @@
   "method": "GET",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 200, "capacity": 200 },
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/emr/patients/{patientId}/current",
@@ -37,7 +37,7 @@
   "method": "GET",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 100, "capacity": 100 },
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/emr/patients/{patientId}/history",
@@ -54,7 +54,7 @@
   "method": "GET",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 50, "capacity": 50 },
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/emr/patients/{patientId}/as-of",

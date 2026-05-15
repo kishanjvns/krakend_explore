@@ -1,12 +1,14 @@
-image: quay.io/keycloak/keycloak:24.0.3
+image: quay.io/keycloak/keycloak:26.0.0
 port: 8090
 nodePort: 30090
-adminPassword: admin
 realmConfigMap: keycloak-realm
 env:
-  KEYCLOAK_ADMIN: admin
-  KEYCLOAK_ADMIN_PASSWORD: admin
+  KC_BOOTSTRAP_ADMIN_USERNAME: admin
+  KC_BOOTSTRAP_ADMIN_PASSWORD: admin
   KC_HTTP_PORT: "8090"
+  KC_DB: postgres
+  KC_DB_URL: jdbc:postgresql://keycloak-postgres-service:5432/keycloak
+  KC_DB_USERNAME: keycloak
+  KC_DB_PASSWORD: keycloak
   KC_HOSTNAME_STRICT: "false"
-  KC_HOSTNAME_STRICT_HTTPS: "false"
   KC_HTTP_ENABLED: "true"

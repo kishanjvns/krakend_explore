@@ -1,6 +1,7 @@
 package com.mediq.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnTransformer;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -26,6 +27,7 @@ public class UserOutboxEntity {
     private String destination;
 
     @Column(name = "payload", columnDefinition = "jsonb", nullable = false)
+    @ColumnTransformer(write = "?::jsonb")
     private String payload;
 
     // Epoch milliseconds — required by Debezium EventRouter

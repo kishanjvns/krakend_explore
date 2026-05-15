@@ -1,6 +1,7 @@
 package com.mediq.appointment.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnTransformer;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -25,6 +26,7 @@ public class AppointmentOutboxEntity {
     private String destination = "mediq.appointment.events";
 
     @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
+    @ColumnTransformer(write = "?::jsonb")
     private String payload;
 
     @Column(name = "timestamp", nullable = false)

@@ -18,7 +18,94 @@
     ]
   },
 
+  "components": {
+    "org.keycloak.storage.UserStorageProvider": [
+      {
+        "id": "mediq-user-storage-id",
+        "name": "mediq-db",
+        "providerId": "mediq-user-storage",
+        "subComponents": {},
+        "config": {
+          "priority": ["0"],
+          "cachePolicy": ["DEFAULT"],
+          "importEnabled": ["false"],
+          "db.url": ["jdbc:postgresql://postgres-service:5432/mediq_users"],
+          "db.user": ["mediq"],
+          "db.password": ["mediq"],
+          "db.schema": ["mediq_users"]
+        }
+      }
+    ]
+  },
+
   "clients": [
+    {
+      "clientId": "mediq-test-cli",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": false,
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "realm-roles-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "false",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "role",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "userId-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "userId",
+            "claim.name": "userId",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "userType-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "userType",
+            "claim.name": "userType",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "permissions-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "permissions",
+            "claim.name": "permissions",
+            "jsonType.label": "String",
+            "multivalued": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
     {
       "clientId": "mediq-frontend-spa",
       "name": "Mediq Frontend SPA",
@@ -52,59 +139,51 @@
             "claim.name": "role",
             "jsonType.label": "String"
           }
+        },
+        {
+          "name": "userId-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "userId",
+            "claim.name": "userId",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "userType-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "userType",
+            "claim.name": "userType",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "permissions-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "permissions",
+            "claim.name": "permissions",
+            "jsonType.label": "String",
+            "multivalued": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
         }
       ]
-    }
-  ],
-
-  "users": [
-    {
-      "username": "dr.mehta",
-      "email": "dr.mehta@mediq.com",
-      "firstName": "Raj",
-      "lastName": "Mehta",
-      "enabled": true,
-      "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "doctor123",
-          "temporary": false
-        }
-      ],
-      "realmRoles": ["DOCTOR"]
-    },
-    {
-      "username": "nurse.priya",
-      "email": "priya@mediq.com",
-      "firstName": "Priya",
-      "lastName": "Verma",
-      "enabled": true,
-      "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "nurse123",
-          "temporary": false
-        }
-      ],
-      "realmRoles": ["NURSE"]
-    },
-    {
-      "username": "admin",
-      "email": "admin@mediq.com",
-      "firstName": "System",
-      "lastName": "Admin",
-      "enabled": true,
-      "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "admin123",
-          "temporary": false
-        }
-      ],
-      "realmRoles": ["ADMIN"]
     }
   ]
 }

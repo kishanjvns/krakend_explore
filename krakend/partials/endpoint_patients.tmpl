@@ -1,4 +1,4 @@
-{
+﻿{
   "endpoint": "/api/v1/patient-summary/{id}",
   "method": "GET",
   "extra_config": {
@@ -6,7 +6,7 @@
       "max_rate": 200,
       "capacity": 200
     },
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [
     {

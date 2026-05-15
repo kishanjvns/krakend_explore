@@ -25,11 +25,10 @@ public class AuthController {
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> me(
-            @RequestHeader("X-User-Id")          String userId,
-            @RequestHeader("X-Keycloak-Id")       String keycloakId,
-            @RequestHeader("X-User-Email")        String email,
-            @RequestHeader("X-User-Role")         String role,
-            @RequestHeader("X-User-Type")         String userType,
+            @RequestHeader("X-User-Id")    String userId,
+            @RequestHeader("X-User-Email") String email,
+            @RequestHeader("X-User-Role")  String role,
+            @RequestHeader(value = "X-User-Type",        required = false) String userType,
             @RequestHeader(value = "X-User-Permissions", required = false) String permissionsHeader) {
 
         List<String> permissions = permissionsHeader != null
@@ -38,10 +37,9 @@ public class AuthController {
 
         return ResponseEntity.ok(Map.of(
             "userId",      userId,
-            "keycloakId",  keycloakId,
             "email",       email,
             "role",        role,
-            "userType",    userType,
+            "userType",    userType != null ? userType : role,
             "permissions", permissions
         ));
     }
@@ -53,9 +51,9 @@ public class AuthController {
             @RequestHeader("X-Token-Exp") String expEpochSeconds) {
 
         try {
-            long expSeconds = Long.parseLong(expEpochSeconds);
-            long nowSeconds = Instant.now().getEpochSecond();
-            long remainingTtl = expSeconds - nowSeconds;
+            long expSeconds     = Long.parseLong(expEpochSeconds);
+            long nowSeconds     = Instant.now().getEpochSecond();
+            long remainingTtl   = expSeconds - nowSeconds;
 
             if (remainingTtl > 0) {
                 redisTemplate.opsForValue().set(
@@ -64,8 +62,7 @@ public class AuthController {
                     Duration.ofSeconds(remainingTtl)
                 );
             }
-        } catch (NumberFormatException ignored) {
-        }
+        } catch (NumberFormatException ignored) {}
 
         return ResponseEntity.ok().build();
     }

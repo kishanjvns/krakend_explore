@@ -1,0 +1,10 @@
+{{- $jar := .Files.Get "files/keycloak-user-spi.jar" -}}
+{{- if $jar }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-spi-jar
+  namespace: {{ .Release.Namespace }}
+binaryData:
+  keycloak-user-spi.jar: {{ $jar | b64enc | quote }}
+{{- end }}

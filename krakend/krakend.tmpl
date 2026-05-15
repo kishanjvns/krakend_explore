@@ -31,10 +31,10 @@
         "otlp": [
           {
             "name": "jaeger-otlp",
-            "host": "{{ .env.JAEGER_HOST }}",
+            "host": "{{ env "JAEGER_HOST" }}",
             "port": 4317,
             "use_grpc": true,
-            "disable_metrics": false,
+            "disable_metrics": true,
             "disable_traces": false
           }
         ]

@@ -1,9 +1,9 @@
-{
+﻿{
   "endpoint": "/api/v1/referrals",
   "method": "GET",
   "output_encoding": "no-op",
   "extra_config": {
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/referrals",
@@ -16,7 +16,7 @@
   "method": "GET",
   "output_encoding": "no-op",
   "extra_config": {
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/referrals/open",
@@ -29,7 +29,7 @@
   "method": "GET",
   "output_encoding": "no-op",
   "extra_config": {
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/referrals/patient/{patientId}",
@@ -41,7 +41,7 @@
   "endpoint": "/api/v1/referrals/{referralId}",
   "method": "GET",
   "extra_config": {
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/referrals/{referralId}",

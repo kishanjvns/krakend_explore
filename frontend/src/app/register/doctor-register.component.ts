@@ -63,36 +63,30 @@ import { API_BASE } from '../core/api.config';
             </div>
 
             <div>
-              <label class="block text-xs font-medium text-blue-200 mb-1">Medical license number</label>
-              <input name="licenseNumber" [(ngModel)]="form.licenseNumber" required
-                class="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 text-sm focus:outline-none focus:border-indigo-400 focus:bg-white/15 transition-colors"
-                placeholder="MCI-2024-12345"/>
+              <label class="block text-xs font-medium text-blue-200 mb-1">Date of birth</label>
+              <input name="dateOfBirth" type="date" [(ngModel)]="form.dateOfBirth" required
+                class="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 text-sm focus:outline-none focus:border-indigo-400 focus:bg-white/15 transition-colors [color-scheme:dark]"/>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-medium text-blue-200 mb-1">Years of experience</label>
-                <input name="yearsOfExperience" type="number" min="0" [(ngModel)]="form.yearsOfExperience"
+                <label class="block text-xs font-medium text-blue-200 mb-1">Medical license no.</label>
+                <input name="licenseNumber" [(ngModel)]="form.licenseNumber" required
                   class="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 text-sm focus:outline-none focus:border-indigo-400 focus:bg-white/15 transition-colors"
-                  placeholder="5"/>
+                  placeholder="MCI-2024-12345"/>
               </div>
               <div>
-                <label class="block text-xs font-medium text-blue-200 mb-1">Consultation fee (₹)</label>
-                <input name="consultationFee" type="number" min="0" [(ngModel)]="form.consultationFee"
-                  class="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 text-sm focus:outline-none focus:border-indigo-400 focus:bg-white/15 transition-colors"
-                  placeholder="500"/>
+                <label class="block text-xs font-medium text-blue-200 mb-1">License expiry</label>
+                <input name="licenseExpiry" type="date" [(ngModel)]="form.licenseExpiry" required
+                  class="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 text-sm focus:outline-none focus:border-indigo-400 focus:bg-white/15 transition-colors [color-scheme:dark]"/>
               </div>
             </div>
 
             <div>
-              <label class="block text-xs font-medium text-blue-200 mb-1">Primary specialization</label>
-              <select name="specialization" [(ngModel)]="form.specialization"
-                class="w-full px-3 py-2.5 bg-slate-800 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-400 transition-colors">
-                <option value="">Select specialization</option>
-                @for (s of specializations; track s) {
-                  <option [value]="s">{{ s }}</option>
-                }
-              </select>
+              <label class="block text-xs font-medium text-blue-200 mb-1">Years of experience</label>
+              <input name="yearsOfExperience" type="number" min="0" [(ngModel)]="form.yearsOfExperience"
+                class="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/30 text-sm focus:outline-none focus:border-indigo-400 focus:bg-white/15 transition-colors"
+                placeholder="5"/>
             </div>
 
             <button type="submit" [disabled]="loading() || f.invalid"
@@ -129,7 +123,7 @@ export class DoctorRegisterComponent {
 
   form = {
     firstName: '', lastName: '', email: '', password: '',
-    licenseNumber: '', yearsOfExperience: 0, consultationFee: 500, specialization: ''
+    dateOfBirth: '', licenseNumber: '', licenseExpiry: '', yearsOfExperience: 0
   };
   loading = signal(false);
   error = signal('');
@@ -141,13 +135,13 @@ export class DoctorRegisterComponent {
     const payload = {
       firstName: this.form.firstName,
       lastName: this.form.lastName,
-      email: this.form.email,
+      dateOfBirth: this.form.dateOfBirth,
       password: this.form.password,
       licenseNumber: this.form.licenseNumber,
+      licenseExpiry: this.form.licenseExpiry,
       yearsOfExperience: this.form.yearsOfExperience,
-      consultationFee: this.form.consultationFee,
-      primarySpecialization: this.form.specialization,
-      contacts: [{ contactType: 'EMAIL', contactValue: this.form.email, isPrimary: true }]
+      contacts: [{ contactType: 'EMAIL', contactValue: this.form.email, isPrimary: true }],
+      addresses: []
     };
 
     this.http.post(`${API_BASE}/users/doctors/register`, payload).subscribe({

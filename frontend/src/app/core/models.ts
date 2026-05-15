@@ -6,7 +6,6 @@ export interface ContactRequest {
 
 export interface UserResponse {
   id: string;
-  keycloakId: string;
   userType: string;
   fullName: string;
   firstName: string;

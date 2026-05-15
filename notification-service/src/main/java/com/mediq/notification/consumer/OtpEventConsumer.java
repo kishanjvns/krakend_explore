@@ -1,7 +1,7 @@
 package com.mediq.notification.consumer;
 
 import com.mediq.notification.event.OtpRequestedEvent;
-import com.mediq.notification.service.NotificationService;
+import com.mediq.notification.service.OtpService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -13,10 +13,10 @@ public class OtpEventConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(OtpEventConsumer.class);
 
-    private final NotificationService notificationService;
+    private final OtpService otpService;
 
-    public OtpEventConsumer(NotificationService notificationService) {
-        this.notificationService = notificationService;
+    public OtpEventConsumer(OtpService otpService) {
+        this.otpService = otpService;
     }
 
     @KafkaListener(
@@ -29,29 +29,14 @@ public class OtpEventConsumer {
             return;
         }
 
-        log.info("OTP event received → userId={} contactType={}",
+        log.info("OTP_REQUESTED event received → userId={} contactType={}",
             event.userId(), event.contactType());
 
         try {
-            if ("EMAIL".equals(event.contactType())) {
-                notificationService.sendOtpViaEmail(
-                    event.userId(),
-                    event.destination(),
-                    event.userName(),
-                    event.otp(),
-                    event.expiresInMinutes()
-                );
-            } else if ("PHONE".equals(event.contactType())) {
-                notificationService.sendOtpViaPhone(
-                    event.userId(),
-                    event.destination(),
-                    event.otp(),
-                    event.expiresInMinutes()
-                );
-            }
+            otpService.generateAndSend(event);
             ack.acknowledge();
         } catch (Exception e) {
-            log.error("OTP notification failed → userId={} error={}",
+            log.error("OTP generation/send failed → userId={} error={}",
                 event.userId(), e.getMessage());
             // Do NOT ack — Kafka retries
         }

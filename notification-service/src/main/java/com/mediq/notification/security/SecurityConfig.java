@@ -26,7 +26,11 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers(
+                    "/users/*/send-otp",
+                    "/users/*/verify-otp",
+                    "/actuator/**"
+                ).permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(krakenDAuthFilter, UsernamePasswordAuthenticationFilter.class);

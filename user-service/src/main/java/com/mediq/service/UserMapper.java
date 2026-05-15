@@ -65,7 +65,6 @@ public class UserMapper {
 
         return new UserResponse(
             user.getId(),
-            user.getKeycloakId(),
             user.getUserType(),
             user.getFirstName(),
             user.getLastName(),

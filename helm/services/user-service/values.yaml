@@ -12,8 +12,6 @@ env:
   KAFKA_BOOTSTRAP_SERVERS: kafka-service:9092
   REDIS_HOST: redis-service
   REDIS_PORT: "6379"
-  KEYCLOAK_ADMIN_URL: http://keycloak-service:8090
-  KEYCLOAK_ADMIN_SECRET: admin
   JAEGER_ENDPOINT: http://jaeger-service:4318/v1/traces
   ENVIRONMENT: kubernetes
   JAVA_OPTS: "-Xms128m -Xmx384m -XX:+UseG1GC"

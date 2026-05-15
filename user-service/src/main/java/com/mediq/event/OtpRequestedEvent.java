@@ -10,12 +10,11 @@ public record OtpRequestedEvent(
         String contactType,
         String destination,
         String userName,
-        String otp,
         int expiresInMinutes,
         Instant occurredAt
 ) {
     public static OtpRequestedEvent of(String userId, String contactType,
-            String destination, String userName, String otp) {
+            String destination, String userName) {
         return new OtpRequestedEvent(
             UUID.randomUUID().toString(),
             "OTP_REQUESTED",
@@ -23,7 +22,6 @@ public record OtpRequestedEvent(
             contactType,
             destination,
             userName,
-            otp,
             5,
             Instant.now()
         );

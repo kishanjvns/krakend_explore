@@ -6,7 +6,6 @@ public record UserEvent(
         String eventId,
         String eventType,
         String userId,
-        String keycloakId,
         String userType,
         String firstName,
         String lastName,

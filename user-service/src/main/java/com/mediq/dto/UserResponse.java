@@ -8,7 +8,6 @@ import java.util.UUID;
 
 public record UserResponse(
     UUID id,
-    String keycloakId,
     UserType userType,
     String firstName,
     String lastName,

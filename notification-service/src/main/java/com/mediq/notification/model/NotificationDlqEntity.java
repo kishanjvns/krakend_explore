@@ -1,6 +1,7 @@
 package com.mediq.notification.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnTransformer;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -20,6 +21,7 @@ public class NotificationDlqEntity {
     private String eventType;
 
     @Column(name = "event_payload", columnDefinition = "jsonb")
+    @ColumnTransformer(write = "?::jsonb")
     private String eventPayload;
 
     @Column(name = "failure_reason", columnDefinition = "text")

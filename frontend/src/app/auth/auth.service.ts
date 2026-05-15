@@ -56,10 +56,17 @@ export class AuthService {
   public get userName(): string { return this.claims['name'] || this.claims['preferred_username'] || 'User'; }
   public get userEmail(): string { return this.claims['email'] || ''; }
   public get role(): string { return this.claims['role'] || (this.claims['realm_access']?.roles?.[0]) || ''; }
-  public get userId(): string { return this.currentUser()?.id || this.claims['sub'] || ''; }
-  public get keycloakId(): string { return this.claims['sub'] || ''; }
+  public get userId(): string { return this.claims['userId'] || this.currentUser()?.id || ''; }
+  public get userSub(): string { return this.claims['sub'] || ''; }
+  public get userType(): string { return this.claims['userType'] || this.role; }
+  public get permissions(): string[] {
+    const raw = this.claims['permissions'];
+    if (!raw) return [];
+    return (raw as string).split(',').map((p: string) => p.trim()).filter(Boolean);
+  }
   public get doctorProfileId(): string { return this.currentUser()?.doctorProfile?.id || ''; }
 
+  public hasPermission(permission: string): boolean { return this.permissions.includes(permission); }
   public isPatient() { return this.role === 'PATIENT'; }
   public isDoctor() { return this.role === 'DOCTOR'; }
   public isAdmin() { return this.role === 'ADMIN'; }

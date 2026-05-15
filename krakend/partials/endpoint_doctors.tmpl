@@ -1,4 +1,4 @@
-{
+﻿{
   "endpoint": "/api/v1/doctors/search",
   "method": "GET",
   "output_encoding": "no-op",
@@ -17,7 +17,7 @@
   "method": "GET",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/doctors/{doctorId}",
@@ -48,7 +48,7 @@
   "method": "GET",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 500, "capacity": 500 },
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/doctors/{doctorId}",
@@ -66,7 +66,7 @@
   "method": "GET",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 200, "capacity": 200 },
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [
     {

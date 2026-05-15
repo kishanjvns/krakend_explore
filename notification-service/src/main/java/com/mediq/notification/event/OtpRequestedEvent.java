@@ -11,7 +11,6 @@ public record OtpRequestedEvent(
         String contactType,
         String destination,
         String userName,
-        String otp,
         int expiresInMinutes,
         Instant occurredAt
 ) {}

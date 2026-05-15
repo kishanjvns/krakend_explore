@@ -1,29 +1,21 @@
-{
+﻿{
   "endpoint": "/api/v1/users/patients/register",
   "method": "POST",
-  "output_encoding": "json",
+  "output_encoding": "no-op",
   "backend": [{
     "url_pattern": "/users/patients/register",
     "host": ["{{ .hosts.user_service }}"],
-    "encoding": "json",
-    "extra_config": {
-      {{ template "rate_limit_proxy.tmpl" . }},
-      {{ template "circuit_breaker.tmpl" . }}
-    }
+    "encoding": "no-op"
   }]
 },
 {
   "endpoint": "/api/v1/users/doctors/register",
   "method": "POST",
-  "output_encoding": "json",
+  "output_encoding": "no-op",
   "backend": [{
     "url_pattern": "/users/doctors/register",
     "host": ["{{ .hosts.user_service }}"],
-    "encoding": "json",
-    "extra_config": {
-      {{ template "rate_limit_proxy.tmpl" . }},
-      {{ template "circuit_breaker.tmpl" . }}
-    }
+    "encoding": "no-op"
   }]
 },
 {
@@ -31,7 +23,7 @@
   "method": "GET",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/users/{userId}",
@@ -47,7 +39,7 @@
   "endpoint": "/api/v1/users/{userId}",
   "method": "DELETE",
   "extra_config": {
-    {{ template "auth_doctor_nurse_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/users/{userId}",
@@ -63,7 +55,7 @@
   "endpoint": "/api/v1/users/doctors/pending-verification",
   "method": "GET",
   "extra_config": {
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/users/doctors/pending-verification",
@@ -79,7 +71,7 @@
   "endpoint": "/api/v1/users/doctors/{doctorUserId}/verify",
   "method": "PUT",
   "extra_config": {
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/users/doctors/{doctorUserId}/verify",
@@ -95,7 +87,7 @@
   "endpoint": "/api/v1/admin/roles",
   "method": "GET",
   "extra_config": {
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/admin/roles",
@@ -111,7 +103,7 @@
   "endpoint": "/api/v1/admin/roles/{roleName}/permissions",
   "method": "PUT",
   "extra_config": {
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/admin/roles/{roleName}/permissions",
@@ -127,7 +119,7 @@
   "endpoint": "/api/v1/admin/permissions",
   "method": "GET",
   "extra_config": {
-    {{ template "auth_doctor_admin.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/admin/permissions",
@@ -142,11 +134,11 @@
 {
   "endpoint": "/api/v1/users/{userId}/send-otp",
   "method": "POST",
-  "output_encoding": "json",
+  "output_encoding": "no-op",
   "backend": [{
     "url_pattern": "/users/{userId}/send-otp",
-    "host": ["{{ .hosts.user_service }}"],
-    "encoding": "json",
+    "host": ["{{ .hosts.notification_service }}"],
+    "encoding": "no-op",
     "extra_config": {
       {{ template "rate_limit_proxy.tmpl" . }},
       {{ template "circuit_breaker.tmpl" . }}
@@ -156,11 +148,11 @@
 {
   "endpoint": "/api/v1/users/{userId}/verify-otp",
   "method": "POST",
-  "output_encoding": "json",
+  "output_encoding": "no-op",
   "backend": [{
     "url_pattern": "/users/{userId}/verify-otp",
-    "host": ["{{ .hosts.user_service }}"],
-    "encoding": "json",
+    "host": ["{{ .hosts.notification_service }}"],
+    "encoding": "no-op",
     "extra_config": {
       {{ template "rate_limit_proxy.tmpl" . }},
       {{ template "circuit_breaker.tmpl" . }}

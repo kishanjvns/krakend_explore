@@ -1,6 +1,7 @@
 package com.mediq.emr.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnTransformer;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -23,6 +24,7 @@ public class PatientEventEntity {
     private Long sequenceNumber;
 
     @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
+    @ColumnTransformer(write = "?::jsonb")
     private String payload;
 
     @Column(name = "recorded_by")

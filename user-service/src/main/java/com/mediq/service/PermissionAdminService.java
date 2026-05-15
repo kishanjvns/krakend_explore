@@ -1,66 +1,43 @@
 package com.mediq.service;
 
+import com.mediq.model.RolePermission;
+import com.mediq.repository.RolePermissionsRepository;
 import com.mediq.security.MediqPermissions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class PermissionAdminService {
 
     private static final Logger log = LoggerFactory.getLogger(PermissionAdminService.class);
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RolePermissionsRepository rolePermissionsRepository;
 
-    @Value("${mediq.keycloak.admin-url}")
-    private String keycloakAdminUrl;
+    public PermissionAdminService(RolePermissionsRepository rolePermissionsRepository) {
+        this.rolePermissionsRepository = rolePermissionsRepository;
+    }
 
-    @Value("${KEYCLOAK_ADMIN_USERNAME:admin}")
-    private String adminUsername;
-
-    @Value("${KEYCLOAK_ADMIN_PASSWORD:admin}")
-    private String adminPassword;
-
+    @Transactional(readOnly = true)
     public List<RolePermissionDto> getAllRolePermissions() {
-        List<String> roleNames = List.of("PATIENT", "DOCTOR", "NURSE", "ADMIN");
-        List<RolePermissionDto> result = new ArrayList<>();
-        for (String roleName : roleNames) {
-            result.add(new RolePermissionDto(roleName, getRolePermissions(roleName)));
-        }
-        return result;
+        Map<String, List<String>> grouped = rolePermissionsRepository.findAll()
+            .stream()
+            .collect(Collectors.groupingBy(
+                RolePermission::getRoleName,
+                Collectors.mapping(RolePermission::getPermission, Collectors.toList())
+            ));
+
+        return List.of("PATIENT", "DOCTOR", "NURSE", "ADMIN").stream()
+            .map(role -> new RolePermissionDto(role, grouped.getOrDefault(role, List.of())))
+            .toList();
     }
 
-    @SuppressWarnings("unchecked")
-    private List<String> getRolePermissions(String roleName) {
-        try {
-            String token = getAdminToken();
-            String url = keycloakAdminUrl + "/admin/realms/mediq/roles/" + roleName;
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(token);
-
-            ResponseEntity<Map> response = restTemplate.exchange(
-                url, HttpMethod.GET, new HttpEntity<>(headers), Map.class);
-
-            Map<String, Object> role = response.getBody();
-            if (role == null) return List.of();
-
-            Map<String, List<String>> attrs = (Map<String, List<String>>) role.get("attributes");
-            if (attrs == null || !attrs.containsKey("permissions")) return List.of();
-            return attrs.get("permissions");
-
-        } catch (Exception e) {
-            log.error("Failed to get permissions for role {}: {}", roleName, e.getMessage());
-            return List.of();
-        }
-    }
-
-    @SuppressWarnings("unchecked")
+    @Transactional
     public void updateRolePermissions(String roleName, List<String> permissions) {
         List<String> invalid = permissions.stream()
             .filter(p -> !MediqPermissions.ALL_PERMISSIONS.contains(p))
@@ -70,51 +47,18 @@ public class PermissionAdminService {
             throw new IllegalArgumentException("Unknown permissions: " + invalid);
         }
 
-        try {
-            String token = getAdminToken();
-            String url = keycloakAdminUrl + "/admin/realms/mediq/roles/" + roleName;
+        rolePermissionsRepository.deleteByRoleName(roleName);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(token);
-            headers.setContentType(MediaType.APPLICATION_JSON);
+        List<RolePermission> newMappings = permissions.stream()
+            .map(p -> new RolePermission(roleName, p))
+            .toList();
+        rolePermissionsRepository.saveAll(newMappings);
 
-            ResponseEntity<Map> getResponse = restTemplate.exchange(
-                url, HttpMethod.GET, new HttpEntity<>(headers), Map.class);
-
-            Map<String, Object> role = new HashMap<>(getResponse.getBody());
-            Map<String, List<String>> attrs =
-                (Map<String, List<String>>) role.getOrDefault("attributes", new HashMap<>());
-            attrs.put("permissions", permissions);
-            role.put("attributes", attrs);
-
-            restTemplate.exchange(url, HttpMethod.PUT,
-                new HttpEntity<>(role, headers), Void.class);
-
-            log.info("Updated permissions for role {}: {}", roleName, permissions);
-
-        } catch (Exception e) {
-            log.error("Failed to update permissions for role {}: {}", roleName, e.getMessage());
-            throw new RuntimeException("Failed to update role permissions", e);
-        }
+        log.info("Updated permissions for role={}: {} entries", roleName, permissions.size());
     }
 
+    @Transactional(readOnly = true)
     public List<String> getAllAvailablePermissions() {
         return MediqPermissions.ALL_PERMISSIONS;
-    }
-
-    private String getAdminToken() {
-        String url = keycloakAdminUrl + "/realms/master/protocol/openid-connect/token";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        String body = "grant_type=password&client_id=admin-cli" +
-                      "&username=" + adminUsername +
-                      "&password=" + adminPassword;
-
-        ResponseEntity<Map> response = restTemplate.exchange(
-            url, HttpMethod.POST, new HttpEntity<>(body, headers), Map.class);
-
-        return (String) response.getBody().get("access_token");
     }
 }

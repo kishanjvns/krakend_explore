@@ -17,9 +17,6 @@ public class DoctorProfileEntity {
     @Column(name = "user_id", nullable = false, unique = true)
     private UUID userId;
 
-    @Column(name = "keycloak_id")
-    private String keycloakId;
-
     @Column(name = "license_number", nullable = false, unique = true, length = 100)
     private String licenseNumber;
 
@@ -77,14 +74,6 @@ public class DoctorProfileEntity {
 
     public void setUserId(UUID userId) {
         this.userId = userId;
-    }
-
-    public String getKeycloakId() {
-        return keycloakId;
-    }
-
-    public void setKeycloakId(String keycloakId) {
-        this.keycloakId = keycloakId;
     }
 
     public String getLicenseNumber() {

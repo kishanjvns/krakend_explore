@@ -15,8 +15,8 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "keycloak_id")
-    private String keycloakId;
+    @Column(name = "password_hash")
+    private String passwordHash;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "user_type", nullable = false)
@@ -64,8 +64,8 @@ public class UserEntity {
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 
-    public String getKeycloakId() { return keycloakId; }
-    public void setKeycloakId(String keycloakId) { this.keycloakId = keycloakId; }
+    public String getPasswordHash() { return passwordHash; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 
     public UserType getUserType() { return userType; }
     public void setUserType(UserType userType) { this.userType = userType; }

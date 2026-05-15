@@ -3,6 +3,7 @@ package com.mediq.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mediq.dto.*;
+import com.mediq.event.OtpRequestedEvent;
 import com.mediq.event.UserEvent;
 import com.mediq.exception.UserNotFoundException;
 import com.mediq.model.*;
@@ -11,6 +12,7 @@ import com.mediq.repository.UserOutboxRepository;
 import com.mediq.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,7 +31,7 @@ public class UserService {
     private final UserCacheService cacheService;
     private final UserMapper userMapper;
     private final ObjectMapper objectMapper;
-    private final OtpService otpService;
+    private final PasswordEncoder passwordEncoder;
 
     public UserService(UserRepository userRepository,
                        DoctorProfileRepository doctorProfileRepository,
@@ -37,14 +39,14 @@ public class UserService {
                        UserCacheService cacheService,
                        UserMapper userMapper,
                        ObjectMapper objectMapper,
-                       OtpService otpService) {
+                       PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.doctorProfileRepository = doctorProfileRepository;
         this.outboxRepository = outboxRepository;
         this.cacheService = cacheService;
         this.userMapper = userMapper;
         this.objectMapper = objectMapper;
-        this.otpService = otpService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
@@ -52,14 +54,13 @@ public class UserService {
         log.info("Registering patient: {}", request.firstName());
 
         UserEntity user = userMapper.toEntity(request, UserType.PATIENT);
+        user.setPasswordHash(passwordEncoder.encode(request.password()));
         userRepository.save(user);
 
-        UserEvent event = buildEvent("USER_REGISTERED", user, request.contacts());
-        saveToOutbox(event);
+        saveToOutbox(buildEvent("USER_REGISTERED", user, request.contacts()));
+        saveOtpRequestsToOutbox(user, request.contacts());
 
-        otpService.sendOtp(user.getId());
-
-        log.info("Patient registered + OTP triggered: userId={}", user.getId());
+        log.info("Patient registered: userId={}", user.getId());
         return userMapper.toResponse(user);
     }
 
@@ -68,6 +69,7 @@ public class UserService {
         log.info("Registering doctor: {}", request.firstName());
 
         UserEntity user = userMapper.toEntity(request, UserType.DOCTOR);
+        user.setPasswordHash(passwordEncoder.encode(request.password()));
         userRepository.save(user);
 
         DoctorProfileEntity profile = new DoctorProfileEntity();
@@ -78,20 +80,10 @@ public class UserService {
         profile.setVerificationStatus(VerificationStatus.PENDING);
         doctorProfileRepository.save(profile);
 
-        UserEvent event = buildEvent("USER_REGISTERED", user, request.contacts());
-        saveToOutbox(event);
+        saveToOutbox(buildEvent("USER_REGISTERED", user, request.contacts()));
+        saveOtpRequestsToOutbox(user, request.contacts());
 
-        otpService.sendOtp(user.getId());
-
-        log.info("Doctor registered (PENDING verification) + OTP triggered: userId={}", user.getId());
-        return userMapper.toResponse(user);
-    }
-
-    @Transactional(readOnly = true)
-    public UserResponse getUserByKeycloakId(String keycloakId) {
-        UserEntity user = userRepository.findByKeycloakId(keycloakId)
-            .orElseThrow(() -> new UserNotFoundException(
-                UUID.fromString("00000000-0000-0000-0000-000000000000")));
+        log.info("Doctor registered (PENDING verification): userId={}", user.getId());
         return userMapper.toResponse(user);
     }
 
@@ -100,7 +92,7 @@ public class UserService {
         UserResponse cached = cacheService.get(userId);
         if (cached != null) return cached;
 
-        UserEntity user = userRepository.findByIdWithDetails(userId)
+        UserEntity user = userRepository.findById(userId)
             .orElseThrow(() -> new UserNotFoundException(userId));
 
         UserResponse response = userMapper.toResponse(user);
@@ -120,22 +112,50 @@ public class UserService {
 
         cacheService.evict(userId);
 
-        UserEvent event = buildEvent("USER_DEACTIVATED", user,
+        saveToOutbox(buildEvent("USER_DEACTIVATED", user,
             user.getContacts().stream()
                 .map(c -> new ContactRequest(c.getContactType(), c.getContactValue(), c.isPrimary()))
-                .toList());
-        saveToOutbox(event);
+                .toList()));
 
         return userMapper.toResponse(user);
     }
 
     @Transactional
+    public UserResponse activateUser(UUID userId, UUID requestedBy) {
+        UserEntity user = userRepository.findById(userId)
+            .orElseThrow(() -> new UserNotFoundException(userId));
+
+        user.setActive(true);
+        user.setUpdatedBy(requestedBy);
+        user.setUpdatedAt(Instant.now());
+        userRepository.save(user);
+
+        cacheService.evict(userId);
+        return userMapper.toResponse(user);
+    }
+
+    @Transactional
+    public UserResponse changeUserRole(UUID userId, UserType newRole, UUID requestedBy) {
+        UserEntity user = userRepository.findById(userId)
+            .orElseThrow(() -> new UserNotFoundException(userId));
+
+        user.setUserType(newRole);
+        user.setUpdatedBy(requestedBy);
+        user.setUpdatedAt(Instant.now());
+        userRepository.save(user);
+
+        cacheService.evict(userId);
+        return userMapper.toResponse(user);
+    }
+
+    @Transactional
     public UserResponse verifyDoctor(UUID doctorUserId, DoctorVerificationRequest request, UUID adminId) {
-        UserEntity user = userRepository.findByIdWithDetails(doctorUserId)
+        UserEntity user = userRepository.findById(doctorUserId)
             .orElseThrow(() -> new UserNotFoundException(doctorUserId));
 
         DoctorProfileEntity profile = doctorProfileRepository.findByUserId(doctorUserId)
-            .orElseThrow(() -> new IllegalStateException("Doctor profile not found for userId: " + doctorUserId));
+            .orElseThrow(() -> new IllegalStateException(
+                "Doctor profile not found for userId: " + doctorUserId));
 
         profile.setVerificationStatus(request.status());
         profile.setVerifiedBy(adminId);
@@ -144,7 +164,6 @@ public class UserService {
         if (request.status() == VerificationStatus.REJECTED) {
             profile.setRejectionReason(request.rejectionReason());
         }
-
         if (request.status() == VerificationStatus.VERIFIED) {
             user.setVerified(true);
         }
@@ -153,11 +172,10 @@ public class UserService {
         userRepository.save(user);
         cacheService.evict(doctorUserId);
 
-        UserEvent event = buildEvent("DOCTOR_VERIFIED", user,
+        saveToOutbox(buildEvent("DOCTOR_VERIFIED", user,
             user.getContacts().stream()
                 .map(c -> new ContactRequest(c.getContactType(), c.getContactValue(), c.isPrimary()))
-                .toList());
-        saveToOutbox(event);
+                .toList()));
 
         return userMapper.toResponse(user);
     }
@@ -171,13 +189,43 @@ public class UserService {
             .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream()
+            .map(userMapper::toResponse)
+            .toList();
+    }
+
+    private void saveOtpRequestsToOutbox(UserEntity user, List<ContactRequest> contacts) {
+        String userName = user.getFirstName() + " " + user.getLastName();
+        contacts.forEach(contact -> {
+            OtpRequestedEvent event = OtpRequestedEvent.of(
+                user.getId().toString(),
+                contact.contactType().name(),
+                contact.contactValue(),
+                userName
+            );
+            try {
+                UserOutboxEntity outbox = new UserOutboxEntity();
+                outbox.setAggregateId(user.getId().toString());
+                outbox.setEventType("OTP_REQUESTED");
+                outbox.setDestination("mediq.user.events");
+                outbox.setTimestamp(Instant.now().toEpochMilli());
+                outbox.setPayload(objectMapper.writeValueAsString(event));
+                outboxRepository.save(outbox);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("Failed to serialize OTP event for outbox: " + e.getMessage(), e);
+            }
+        });
+    }
+
     private void saveToOutbox(UserEvent event) {
         try {
             UserOutboxEntity outbox = new UserOutboxEntity();
             outbox.setAggregateId(event.userId());
             outbox.setEventType(event.eventType());
             outbox.setDestination("mediq.user.events");
-            outbox.setTimestamp(java.time.Instant.now().toEpochMilli());
+            outbox.setTimestamp(Instant.now().toEpochMilli());
             outbox.setPayload(objectMapper.writeValueAsString(event));
             outboxRepository.save(outbox);
         } catch (JsonProcessingException e) {
@@ -185,8 +233,7 @@ public class UserService {
         }
     }
 
-    private UserEvent buildEvent(String eventType, UserEntity user,
-                                 List<ContactRequest> contacts) {
+    private UserEvent buildEvent(String eventType, UserEntity user, List<ContactRequest> contacts) {
         String email = contacts.stream()
             .filter(c -> c.contactType() == ContactType.EMAIL && c.isPrimary())
             .map(ContactRequest::contactValue)
@@ -203,7 +250,6 @@ public class UserService {
 
         return UserEvent.of(eventType,
             user.getId().toString(),
-            user.getKeycloakId(),
             user.getUserType().name(),
             user.getFirstName(),
             user.getLastName(),

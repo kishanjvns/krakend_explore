@@ -69,7 +69,6 @@ public class DoctorService {
 
         DoctorProfileEntity profile = new DoctorProfileEntity();
         profile.setUserId(userId);
-        profile.setKeycloakId(event.keycloakId());
         profile.setFirstName(event.firstName() != null ? event.firstName() : "");
         profile.setLastName(event.lastName() != null ? event.lastName() : "");
         // License placeholder — real license comes from user-service data later

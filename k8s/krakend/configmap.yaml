@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: krakend-config
-  namespace: mediq
-data:
-  FC_ENABLE: "1"
-  FC_TEMPLATES: "/etc/krakend/partials"
-  FC_SETTINGS: "/etc/krakend/settings"

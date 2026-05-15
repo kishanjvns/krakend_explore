@@ -1,10 +1,9 @@
 package com.mediq.controller;
 
 import com.mediq.dto.*;
+import com.mediq.model.UserType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
-import com.mediq.service.OtpService;
-import com.mediq.service.OtpVerificationResult;
 import com.mediq.service.UserService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -14,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -24,11 +22,9 @@ public class UserController {
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
-    private final OtpService otpService;
 
-    public UserController(UserService userService, OtpService otpService) {
+    public UserController(UserService userService) {
         this.userService = userService;
-        this.otpService = otpService;
     }
 
     // ── Public endpoints (no auth required in KrakenD) ────────────────────────
@@ -49,20 +45,27 @@ public class UserController {
 
     // ── Protected endpoints (JWT required via KrakenD) ────────────────────────
 
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserResponse> getMe() {
+        String userId = (String) SecurityContextHolder.getContext()
+            .getAuthentication().getPrincipal();
+        return ResponseEntity.ok(userService.getUserById(UUID.fromString(userId)));
+    }
+
     @GetMapping("/{userId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserResponse> getUserById(@PathVariable UUID userId) {
-        String currentUserId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        log.info("GET /users/{} by currentUserId={}", userId, currentUserId);
         return ResponseEntity.ok(userService.getUserById(userId));
     }
 
     @DeleteMapping("/{userId}")
     @PreAuthorize("hasRole('ADMIN') or #userId.toString() == authentication.principal")
     public ResponseEntity<UserResponse> deactivateUser(@PathVariable UUID userId) {
-        String currentUserId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        UUID requestedBy = UUID.fromString(currentUserId);
-        return ResponseEntity.ok(userService.deactivateUser(userId, requestedBy));
+        String currentUserId = (String) SecurityContextHolder.getContext()
+            .getAuthentication().getPrincipal();
+        return ResponseEntity.ok(userService.deactivateUser(userId,
+            UUID.fromString(currentUserId)));
     }
 
     // ── Admin-only endpoints ──────────────────────────────────────────────────
@@ -78,45 +81,10 @@ public class UserController {
     public ResponseEntity<UserResponse> verifyDoctor(
             @PathVariable UUID doctorUserId,
             @Valid @RequestBody DoctorVerificationRequest request) {
-        String adminIdStr = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        UUID adminId = UUID.fromString(adminIdStr);
-        return ResponseEntity.ok(userService.verifyDoctor(doctorUserId, request, adminId));
-    }
-
-    // ── OTP endpoints ─────────────────────────────────────────────────────────
-
-    @PostMapping("/{userId}/send-otp")
-    public ResponseEntity<Map<String, String>> sendOtp(@PathVariable UUID userId) {
-        otpService.sendOtp(userId);
-        return ResponseEntity.ok(Map.of(
-            "message", "OTP sent to your registered contact(s)",
-            "expiresIn", "5 minutes"
-        ));
-    }
-
-    @PostMapping("/{userId}/verify-otp")
-    public ResponseEntity<Map<String, String>> verifyOtp(
-            @PathVariable UUID userId,
-            @RequestBody Map<String, String> request) {
-        String otp = request.get("otp");
-        if (otp == null || otp.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "OTP is required"));
-        }
-        OtpVerificationResult result = otpService.verifyOtp(userId, otp);
-        if (result.success()) {
-            return ResponseEntity.ok(Map.of("message", result.message()));
-        }
-        return ResponseEntity.badRequest().body(Map.of(
-            "status", result.status(),
-            "message", result.message()
-        ));
-    }
-
-    @GetMapping("/me")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<UserResponse> getMe(
-            @RequestHeader("X-Keycloak-Id") String keycloakId) {
-        return ResponseEntity.ok(userService.getUserByKeycloakId(keycloakId));
+        String adminId = (String) SecurityContextHolder.getContext()
+            .getAuthentication().getPrincipal();
+        return ResponseEntity.ok(userService.verifyDoctor(doctorUserId, request,
+            UUID.fromString(adminId)));
     }
 
     @GetMapping("/health")

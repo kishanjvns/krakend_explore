@@ -1,7 +1,6 @@
 package com.mediq.security;
 
 import java.util.List;
-import java.util.Map;
 
 public final class MediqPermissions {
 
@@ -23,35 +22,5 @@ public final class MediqPermissions {
         "SEND_OTP", "VERIFY_OTP", "MANAGE_ROLES"
     );
 
-    public static final Map<String, List<String>> DEFAULT_ROLE_PERMISSIONS = Map.of(
-        "PATIENT", List.of(
-            "READ_OWN_PROFILE", "WRITE_OWN_PROFILE",
-            "READ_DOCTORS", "READ_DOCTOR_AVAILABILITY",
-            "WRITE_OWN_APPOINTMENT", "READ_OWN_APPOINTMENT",
-            "CANCEL_OWN_APPOINTMENT", "READ_OWN_NOTIFICATIONS",
-            "SEND_OTP", "VERIFY_OTP"
-        ),
-        "DOCTOR", List.of(
-            "READ_OWN_PROFILE", "WRITE_OWN_PROFILE",
-            "READ_PATIENT_PROFILE", "READ_OWN_APPOINTMENT",
-            "WRITE_APPOINTMENT_SLOT", "CONFIRM_APPOINTMENT",
-            "CANCEL_APPOINTMENT", "READ_EMR", "WRITE_EMR",
-            "READ_OWN_ANALYTICS", "READ_OWN_NOTIFICATIONS"
-        ),
-        "NURSE", List.of(
-            "READ_OWN_PROFILE", "READ_PATIENT_PROFILE",
-            "READ_OWN_APPOINTMENT", "WRITE_OWN_APPOINTMENT",
-            "CANCEL_APPOINTMENT", "READ_EMR", "READ_OWN_NOTIFICATIONS"
-        ),
-        "ADMIN", List.of(
-            "READ_OWN_PROFILE", "READ_ANY_PROFILE", "WRITE_ANY_PROFILE",
-            "VERIFY_DOCTOR", "DEACTIVATE_USER",
-            "READ_DOCTORS", "READ_PATIENT_PROFILE",
-            "READ_OWN_APPOINTMENT", "READ_ANY_APPOINTMENT",
-            "CANCEL_ANY_APPOINTMENT", "WRITE_APPOINTMENT_SLOT",
-            "READ_EMR", "WRITE_EMR", "READ_ANALYTICS",
-            "READ_ANY_NOTIFICATIONS", "MANAGE_ROLES",
-            "SEND_OTP", "VERIFY_OTP"
-        )
-    );
+    // Default mappings are seeded in V4 SQL migration and managed via role_permissions table.
 }

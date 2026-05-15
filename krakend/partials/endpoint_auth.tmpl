@@ -1,9 +1,9 @@
-{
+﻿{
   "endpoint": "/api/v1/auth/me",
   "method": "GET",
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
-    {{ template "auth_any_role.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/auth/me",
@@ -19,7 +19,7 @@
   "endpoint": "/api/v1/auth/logout",
   "method": "POST",
   "extra_config": {
-    {{ template "auth_any_role.tmpl" . }}
+    {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/auth/logout",
