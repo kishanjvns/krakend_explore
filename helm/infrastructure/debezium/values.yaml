@@ -1,0 +1,19 @@
+image: debezium/connect:2.7.3.Final
+port: 8083
+
+kafka:
+  bootstrapServers: kafka-service:9092
+
+postgres:
+  host: postgres-service
+  port: "5432"
+  user: debezium
+  password: debezium
+
+resources:
+  requests:
+    memory: 512Mi
+    cpu: 200m
+  limits:
+    memory: 1Gi
+    cpu: 500m

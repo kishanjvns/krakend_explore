@@ -26,6 +26,10 @@ data:
     CREATE DATABASE mediq_payments;
     GRANT ALL PRIVILEGES ON DATABASE mediq_payments TO mediq;
 
-    -- Debezium CDC role (needed by user-service V3 Flyway migration)
-    CREATE ROLE debezium REPLICATION LOGIN PASSWORD 'debezium';
-    GRANT SELECT ON ALL TABLES IN SCHEMA public TO debezium;
+    -- Debezium CDC role
+    CREATE ROLE debezium SUPERUSER LOGIN PASSWORD 'debezium';
+    GRANT CONNECT ON DATABASE mediq_users TO debezium;
+    GRANT CONNECT ON DATABASE mediq_doctors TO debezium;
+    GRANT CONNECT ON DATABASE mediq_appointments TO debezium;
+    GRANT CONNECT ON DATABASE mediq_emr TO debezium;
+    GRANT CONNECT ON DATABASE mediq_payments TO debezium;

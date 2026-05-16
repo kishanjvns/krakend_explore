@@ -31,6 +31,7 @@ spec:
           image: {{ .Values.image }}
           ports:
             - containerPort: {{ .Values.port }}
+          args: ["-c", "wal_level=logical"]
           env:
             - name: POSTGRES_USER
               value: {{ .Values.username }}
