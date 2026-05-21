@@ -150,13 +150,22 @@ export class DoctorProfileComponent implements OnInit {
   ngOnInit() {
     const doctorId = this.route.snapshot.paramMap.get('id')!;
 
-    this.doctorService.search(undefined, false).subscribe({
-      next: (docs) => {
-        const found = docs?.find(d => d.id === doctorId) ?? null;
-        this.profile.set(found);
+    this.doctorService.getDoctorProfile(doctorId).subscribe({
+      next: (profile) => {
+        this.profile.set(profile);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false)
+      error: () => {
+        // Fallback: search all and filter
+        this.doctorService.search(undefined, false).subscribe({
+          next: (docs) => {
+            const found = docs?.find(d => d.id === doctorId) ?? null;
+            this.profile.set(found);
+            this.loading.set(false);
+          },
+          error: () => this.loading.set(false)
+        });
+      }
     });
 
     this.doctorService.getAvailability(doctorId).subscribe({

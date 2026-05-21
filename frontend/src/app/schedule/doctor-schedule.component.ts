@@ -4,7 +4,7 @@ import { SlicePipe } from '@angular/common';
 import { AuthService } from '../auth/auth.service';
 import { DoctorService } from '../core/doctor.service';
 import { AppointmentService } from '../core/appointment.service';
-import { DoctorAvailability, AppointmentResponse, SlotResponse } from '../core/models';
+import { DoctorAvailability, AppointmentResponse, DoctorSearchResponse } from '../core/models';
 
 @Component({
   selector: 'app-doctor-schedule',
@@ -12,7 +12,17 @@ import { DoctorAvailability, AppointmentResponse, SlotResponse } from '../core/m
   imports: [FormsModule, SlicePipe],
   template: `
     <div class="space-y-6">
-      <h1 class="text-2xl font-bold text-slate-800">My Schedule</h1>
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-slate-800">My Schedule</h1>
+        @if (doctorProfile()) {
+          <div class="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2 flex items-center space-x-2">
+            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            <span class="text-sm text-indigo-700 font-medium">Consultation Fee: ₹{{ doctorProfile()!.consultationFee }}</span>
+          </div>
+        }
+      </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -153,6 +163,7 @@ export class DoctorScheduleComponent implements OnInit {
 
   availability = signal<DoctorAvailability[]>([]);
   appointments = signal<AppointmentResponse[]>([]);
+  doctorProfile = signal<DoctorSearchResponse | null>(null);
   aptLoading = signal(true);
   avLoading = signal(false);
   avError = signal('');
@@ -168,6 +179,10 @@ export class DoctorScheduleComponent implements OnInit {
   ngOnInit() {
     const profileId = this.auth.doctorProfileId;
     if (profileId) {
+      this.doctorService.getDoctorProfile(profileId).subscribe({
+        next: (profile) => this.doctorProfile.set(profile),
+        error: () => {}
+      });
       this.doctorService.getAvailability(profileId).subscribe({
         next: (data) => this.availability.set(data ?? []),
         error: () => {}

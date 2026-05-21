@@ -120,12 +120,13 @@ export class DoctorVerificationComponent implements OnInit {
 
   loadDoctors() {
     this.loading.set(true);
-    this.http.get<PendingDoctor[]>(`${API_BASE}/doctors/search?verified=false`).subscribe({
+    this.http.get<PendingDoctor[]>(`${API_BASE}/users/doctors/pending-verification`).subscribe({
       next: (data) => {
         this.allDoctors.set(data ?? []);
         this.loading.set(false);
       },
       error: () => {
+        // Fallback: fetch all doctors and filter locally
         this.http.get<PendingDoctor[]>(`${API_BASE}/doctors/search`).subscribe({
           next: (data) => { this.allDoctors.set(data ?? []); this.loading.set(false); },
           error: () => this.loading.set(false)

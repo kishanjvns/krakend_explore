@@ -126,10 +126,17 @@ export class PatientRegisterComponent {
       addresses: []
     };
 
-    this.http.post(`${API_BASE}/users/patients/register`, payload).subscribe({
-      next: () => {
+    this.http.post<any>(`${API_BASE}/users/patients/register`, payload).subscribe({
+      next: (res) => {
         this.loading.set(false);
-        this.router.navigate(['/'], { queryParams: { registered: '1' } });
+        const userId = res?.id || res?.userId || '';
+        if (userId) {
+          this.router.navigate(['/verify-otp', userId], {
+            state: { userId, email: this.form.email, userName: this.form.firstName + ' ' + this.form.lastName }
+          });
+        } else {
+          this.router.navigate(['/'], { queryParams: { registered: '1' } });
+        }
       },
       error: (err) => {
         this.loading.set(false);

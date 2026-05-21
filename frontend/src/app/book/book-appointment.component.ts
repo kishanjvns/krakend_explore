@@ -178,10 +178,20 @@ export class BookAppointmentComponent implements OnInit {
 
     const patientId = this.auth.userId;
     this.appointmentService.book(slot.id, patientId, this.doctorId).subscribe({
-      next: () => {
+      next: (res) => {
         this.booking.set(false);
         this.bookingSuccess.set(true);
-        setTimeout(() => this.router.navigate(['/appointments']), 1500);
+        const appointmentId = (res as any)?.appointmentId || (res as any)?.workflowId || '';
+        const consultationFee = this.doctor()?.consultationFee ?? 100;
+        setTimeout(() => {
+          if (appointmentId) {
+            this.router.navigate(['/payment'], {
+              state: { appointmentId, amount: consultationFee }
+            });
+          } else {
+            this.router.navigate(['/appointments']);
+          }
+        }, 1500);
       },
       error: (err) => {
         this.booking.set(false);

@@ -84,3 +84,77 @@ export interface NotificationResponse {
   status: string;
   createdAt: string;
 }
+
+export interface EmrState {
+  patientId: string;
+  currentDiagnosis: string;
+  medications: string[];
+  allergies: string[];
+  conditions: string[];
+  lastUpdated: string;
+}
+
+export interface EmrEvent {
+  id: string;
+  patientId: string;
+  eventType: string;
+  payload: any;
+  occurredAt: string;
+  recordedBy: string;
+}
+
+export interface PaymentIntent {
+  id: string;
+  clientSecret: string;
+  amount: number;
+  currency: string;
+  status: string;
+}
+
+export interface Payment {
+  id: string;
+  appointmentId: string;
+  amount: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface AnalyticsDashboard {
+  totalUsers: number;
+  totalDoctors: number;
+  totalAppointments: number;
+  totalRevenue: number;
+}
+
+export interface DailyAppointment {
+  date: string;
+  count: number;
+  revenue: number;
+}
+
+export interface DoctorPerformance {
+  doctorId: string;
+  name: string;
+  appointmentCount: number;
+  rating: number;
+}
+
+export interface Referral {
+  id: string;
+  patientId: string;
+  fromDoctorId: string;
+  toDoctorId: string;
+  reason: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface PatientSummary {
+  patientId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  appointments: AppointmentResponse[];
+  referrals: Referral[];
+  emrState?: EmrState;
+}

@@ -46,6 +46,8 @@ export class AuthService {
   }
 
   public logout() {
+    // Fire-and-forget server-side logout; do not block if it fails
+    this.http.post(`${API_BASE}/auth/logout`, {}).subscribe({ error: () => {} });
     this.oauthService.logOut();
     this.isAuthenticated.set(false);
     this.currentUser.set(null);
