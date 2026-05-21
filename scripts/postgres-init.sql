@@ -37,10 +37,10 @@ GRANT ALL PRIVILEGES ON DATABASE temporal TO mediq;
 GRANT ALL PRIVILEGES ON DATABASE temporal_visibility TO mediq;
 
 -- Debezium CDC replication user
-CREATE USER debezium WITH REPLICATION LOGIN PASSWORD 'debezium';
+-- SUPERUSER is required to create PostgreSQL publications on tables it doesn't own
+CREATE USER debezium WITH SUPERUSER REPLICATION LOGIN PASSWORD 'debezium';
 
 GRANT CONNECT ON DATABASE mediq_users TO debezium;
 GRANT CONNECT ON DATABASE mediq_doctors TO debezium;
 GRANT CONNECT ON DATABASE mediq_appointments TO debezium;
 GRANT CONNECT ON DATABASE mediq_payments TO debezium;
-GRANT CONNECT ON DATABASE mediq_emr TO debezium;
