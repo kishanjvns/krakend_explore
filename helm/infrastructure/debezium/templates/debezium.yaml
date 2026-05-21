@@ -38,9 +38,7 @@ data:
     register_connector "user-outbox-connector"        "/connectors/user-outbox-connector.json"
     register_connector "appointment-outbox-connector" "/connectors/appointment-outbox-connector.json"
     register_connector "doctor-outbox-connector"      "/connectors/doctor-outbox-connector.json"
-    register_connector "emr-outbox-connector"         "/connectors/emr-outbox-connector.json"
     register_connector "payment-outbox-connector"     "/connectors/payment-outbox-connector.json"
-
     echo "All connectors processed. Kafka Connect running (PID $CONNECT_PID)."
     wait $CONNECT_PID
 ---
@@ -140,36 +138,6 @@ data:
       }
     }
 
-  emr-outbox-connector.json: |
-    {
-      "name": "emr-outbox-connector",
-      "config": {
-        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
-        "database.hostname": "{{ .Values.postgres.host }}",
-        "database.port": "{{ .Values.postgres.port }}",
-        "database.user": "{{ .Values.postgres.user }}",
-        "database.password": "{{ .Values.postgres.password }}",
-        "database.dbname": "mediq_emr",
-        "topic.prefix": "dbz.emr",
-        "plugin.name": "pgoutput",
-        "slot.name": "debezium_emr_slot",
-        "publication.name": "debezium_emr_pub",
-        "table.include.list": "mediq_emr.service_outbox",
-        "snapshot.mode": "initial",
-        "transforms": "outbox",
-        "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
-        "transforms.outbox.table.field.event.id": "id",
-        "transforms.outbox.table.field.event.key": "aggregate_id",
-        "transforms.outbox.table.field.event.type": "event_type",
-        "transforms.outbox.table.field.event.payload": "payload",
-        "transforms.outbox.route.by.field": "destination",
-        "transforms.outbox.route.topic.replacement": "${routedByValue}",
-        "key.converter": "org.apache.kafka.connect.storage.StringConverter",
-        "value.converter": "org.apache.kafka.connect.json.JsonConverter",
-        "value.converter.schemas.enable": "false"
-      }
-    }
-
   payment-outbox-connector.json: |
     {
       "name": "payment-outbox-connector",
@@ -199,6 +167,7 @@ data:
         "value.converter.schemas.enable": "false"
       }
     }
+
 ---
 apiVersion: apps/v1
 kind: Deployment

@@ -1,11 +1,8 @@
-﻿{
+{
   "endpoint": "/api/v1/patient-summary/{id}",
   "method": "GET",
   "extra_config": {
-    "qos/ratelimit/router": {
-      "max_rate": 200,
-      "capacity": 200
-    },
+    "qos/ratelimit/router": { "max_rate": 200, "capacity": 200 },
     {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [
@@ -13,18 +10,31 @@
       "url_pattern": "/users/{id}",
       "host": ["{{ .hosts.user_service }}"],
       "encoding": "json",
-      "allow": ["id", "firstName", "lastName", "userType", "active", "verified"],
+      "timeout": "800ms",
+      "allow": ["id", "firstName", "lastName", "email", "userType", "active"],
+      "mapping": { "id": "patientId" },
       "extra_config": {
         {{ template "rate_limit_proxy.tmpl" . }},
         {{ template "circuit_breaker.tmpl" . }}
       }
     },
     {
-      "url_pattern": "/referrals/patient/{id}",
-      "host": ["{{ .hosts.referral_service }}"],
+      "url_pattern": "/appointments?patientId={id}",
+      "host": ["{{ .hosts.appointment_service }}"],
       "encoding": "json",
-      "is_collection": true,
-      "mapping": { "collection": "referrals" },
+      "timeout": "1200ms",
+      "allow": ["appointments"],
+      "extra_config": {
+        {{ template "rate_limit_proxy.tmpl" . }},
+        {{ template "circuit_breaker.tmpl" . }}
+      }
+    },
+    {
+      "url_pattern": "/emr/patients/{id}/current",
+      "host": ["{{ .hosts.emr_service }}"],
+      "encoding": "json",
+      "timeout": "800ms",
+      "group": "emrState",
       "extra_config": {
         {{ template "rate_limit_proxy.tmpl" . }},
         {{ template "circuit_breaker.tmpl" . }}

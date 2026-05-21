@@ -1,9 +1,13 @@
 package com.mediq.payment.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mediq.payment.config.AppointmentBookingWorkflowSignal;
 import com.mediq.payment.event.PaymentNotificationEvent;
 import com.mediq.payment.model.PaymentEntity;
+import com.mediq.payment.model.PaymentOutboxEntity;
 import com.mediq.payment.model.PaymentStatus;
+import com.mediq.payment.repository.PaymentOutboxRepository;
 import com.mediq.payment.repository.PaymentRepository;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
@@ -14,7 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,20 +31,23 @@ public class PaymentService {
     private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
 
     private final PaymentRepository paymentRepository;
+    private final PaymentOutboxRepository outboxRepository;
     private final WorkflowClient workflowClient;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ObjectMapper objectMapper;
     private final String currency;
     private final String paymentEventsTopic;
 
     public PaymentService(
             PaymentRepository paymentRepository,
+            PaymentOutboxRepository outboxRepository,
             WorkflowClient workflowClient,
-            KafkaTemplate<String, Object> kafkaTemplate,
+            ObjectMapper objectMapper,
             @Value("${stripe.currency}") String currency,
             @Value("${mediq.kafka.topic.payment-events}") String paymentEventsTopic) {
         this.paymentRepository = paymentRepository;
+        this.outboxRepository = outboxRepository;
         this.workflowClient = workflowClient;
-        this.kafkaTemplate = kafkaTemplate;
+        this.objectMapper = objectMapper;
         this.currency = currency;
         this.paymentEventsTopic = paymentEventsTopic;
     }
@@ -53,34 +59,22 @@ public class PaymentService {
             BigDecimal amount,
             String temporalWorkflowId) throws StripeException {
 
-        // ── Fix 2: Duplicate guard ────────────────────────────────────────────
-        // Handles Temporal retries + concurrent requests for same appointment.
         Optional<PaymentEntity> existing =
             paymentRepository.findByAppointmentId(UUID.fromString(appointmentId));
 
         if (existing.isPresent()) {
             PaymentEntity existingPayment = existing.get();
-
-            // Stripe call already completed → return existing response (idempotent)
             if (existingPayment.getStripePaymentIntentId() != null) {
-                log.info("Returning existing PaymentIntent for appointmentId={}",
-                    appointmentId);
+                log.info("Returning existing PaymentIntent for appointmentId={}", appointmentId);
                 return new CreatePaymentIntentResponse(
                     existingPayment.getId().toString(),
                     existingPayment.getStripeClientSecret(),
                     existingPayment.getStripePaymentIntentId()
                 );
             }
-
-            // PENDING record exists (Stripe call not completed in previous attempt)
-            // Fall through to Stripe call — idempotency key handles dedup on Stripe side
-            log.info("Found PENDING payment for appointmentId={} — " +
-                     "retrying Stripe call with idempotency key", appointmentId);
+            log.info("Found PENDING payment for appointmentId={} — retrying Stripe call", appointmentId);
         }
 
-        // ── Fix 3: Save PENDING record BEFORE calling Stripe ─────────────────
-        // If app crashes after this and before Stripe: record stays PENDING,
-        // next retry finds it and retries Stripe safely with idempotency key.
         PaymentEntity payment;
         try {
             payment = existing.orElseGet(() -> {
@@ -94,14 +88,11 @@ public class PaymentService {
                 return paymentRepository.save(newPayment);
             });
         } catch (DataIntegrityViolationException e) {
-            // Fix 5: Race condition — another thread inserted first; fetch & proceed
-            log.warn("Race condition on appointmentId={} — fetching existing record",
-                appointmentId);
+            log.warn("Race condition on appointmentId={} — fetching existing record", appointmentId);
             payment = paymentRepository
                 .findByAppointmentId(UUID.fromString(appointmentId))
                 .orElseThrow(() -> new RuntimeException(
                     "Payment record missing after constraint violation: " + appointmentId));
-
             if (payment.getStripePaymentIntentId() != null) {
                 return new CreatePaymentIntentResponse(
                     payment.getId().toString(),
@@ -111,14 +102,7 @@ public class PaymentService {
             }
         }
 
-        log.info("Calling Stripe for appointmentId={} paymentId={}",
-            appointmentId, payment.getId());
-
-        // ── Fix 1: Stripe idempotency key ─────────────────────────────────────
-        // Same appointmentId → same key → Stripe returns SAME PaymentIntent.
-        // Temporal retries never produce a duplicate charge.
         long amountInPaise = amount.multiply(BigDecimal.valueOf(100)).longValue();
-
         PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
             .setAmount(amountInPaise)
             .setCurrency(currency)
@@ -128,8 +112,7 @@ public class PaymentService {
             .putMetadata("mediqPaymentId", payment.getId().toString())
             .setAutomaticPaymentMethods(
                 PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
-                    .setEnabled(true)
-                    .build())
+                    .setEnabled(true).build())
             .build();
 
         RequestOptions options = RequestOptions.builder()
@@ -145,12 +128,9 @@ public class PaymentService {
             payment.setStatus(PaymentStatus.FAILED);
             payment.setFailureReason(e.getMessage());
             paymentRepository.save(payment);
-            log.error("Stripe call failed for appointmentId={}: {}",
-                appointmentId, e.getMessage());
             throw e;
         }
 
-        // ── Update record with Stripe details ─────────────────────────────────
         payment.setStripePaymentIntentId(paymentIntent.getId());
         payment.setStripeClientSecret(paymentIntent.getClientSecret());
         payment.setStatus(PaymentStatus.PROCESSING);
@@ -175,30 +155,46 @@ public class PaymentService {
                 log.info("Payment {} appointmentId={} success={}",
                     paymentIntentId, payment.getAppointmentId(), success);
 
+                // Critical path: Temporal signal drives appointment confirmation
                 sendTemporalSignal(payment.getTemporalWorkflowId(), paymentIntentId, success);
-                publishPaymentEvent(payment, success, failureReason);
+
+                // Outbox write — same transaction as payment update.
+                // Debezium reads from WAL and publishes to Kafka, guaranteeing
+                // at-least-once delivery to notification-service.
+                writeToOutbox(payment, success, failureReason);
             });
     }
 
-    private void publishPaymentEvent(PaymentEntity payment, boolean success,
-                                      String failureReason) {
+    private void writeToOutbox(PaymentEntity payment, boolean success, String failureReason) {
+        String appointmentId = payment.getAppointmentId().toString();
+        String patientId = payment.getPatientId().toString();
+
+        PaymentNotificationEvent event = success
+            ? PaymentNotificationEvent.succeeded(appointmentId, patientId,
+                payment.getAmount().toPlainString(), currency)
+            : PaymentNotificationEvent.failed(appointmentId, patientId,
+                payment.getAmount().toPlainString(), currency, failureReason);
+
+        String eventType = success ? "PAYMENT_SUCCEEDED" : "PAYMENT_FAILED";
+
         try {
-            String appointmentId = payment.getAppointmentId().toString();
-            String patientId = payment.getPatientId().toString();
-            String amount = payment.getAmount().toPlainString();
-            PaymentNotificationEvent event = success
-                ? PaymentNotificationEvent.succeeded(appointmentId, patientId, amount, currency)
-                : PaymentNotificationEvent.failed(appointmentId, patientId, amount, currency, failureReason);
-            kafkaTemplate.send(paymentEventsTopic, appointmentId, event);
-            log.info("PaymentNotificationEvent published → appointmentId={} success={}",
-                appointmentId, success);
-        } catch (Exception e) {
-            log.error("Failed to publish payment notification event: {}", e.getMessage());
+            String payload = objectMapper.writeValueAsString(event);
+            PaymentOutboxEntity outbox = new PaymentOutboxEntity(
+                appointmentId,
+                "Payment",
+                eventType,
+                paymentEventsTopic,
+                payload
+            );
+            outboxRepository.save(outbox);
+            log.info("Outbox row written for appointmentId={} eventType={}", appointmentId, eventType);
+        } catch (JsonProcessingException e) {
+            // Should never happen with a plain Java record — rethrow to roll back the transaction
+            throw new RuntimeException("Failed to serialize payment event to outbox", e);
         }
     }
 
-    private void sendTemporalSignal(String workflowId, String paymentIntentId,
-                                    boolean success) {
+    private void sendTemporalSignal(String workflowId, String paymentIntentId, boolean success) {
         try {
             AppointmentBookingWorkflowSignal workflow =
                 workflowClient.newWorkflowStub(

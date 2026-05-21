@@ -79,10 +79,6 @@ export const routes: Routes = [
         loadComponent: () => import('./analytics/analytics.component').then(m => m.AnalyticsComponent)
       },
       {
-        path: 'referrals',
-        loadComponent: () => import('./referrals/referrals.component').then(m => m.ReferralsComponent)
-      },
-      {
         path: 'admin/verify',
         loadComponent: () => import('./admin/doctor-verification.component').then(m => m.DoctorVerificationComponent),
         canActivate: [roleGuard],
