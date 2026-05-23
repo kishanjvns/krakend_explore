@@ -1,6 +1,7 @@
-﻿{
-  "endpoint": "/api/v1/analytics/dashboard",
+
+{  "endpoint": "/api/v1/analytics/dashboard",
   "method": "GET",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 60, "capacity": 60 },
     {{ template "jwt_validator.tmpl" . }}
@@ -18,6 +19,7 @@
 {
   "endpoint": "/api/v1/analytics/appointments/daily",
   "method": "GET",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 60, "capacity": 60 },
     {{ template "jwt_validator.tmpl" . }}
@@ -35,6 +37,7 @@
 {
   "endpoint": "/api/v1/analytics/doctors/performance",
   "method": "GET",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 60, "capacity": 60 },
     {{ template "jwt_validator.tmpl" . }}

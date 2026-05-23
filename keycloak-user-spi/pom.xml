@@ -65,12 +65,11 @@
             <artifactId>HikariCP</artifactId>
             <version>5.1.0</version>
         </dependency>
-        <!-- provided — Bitnami Keycloak with KC_DB=postgres loads the PG driver at startup -->
+        <!-- bundled — stock Keycloak image uses H2, PG driver is not on classpath -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>42.7.3</version>
-            <scope>provided</scope>
         </dependency>
     </dependencies>
 

@@ -1,6 +1,26 @@
-﻿{
+
+{
   "endpoint": "/api/v1/appointments",
+  "method": "GET",
+  "input_query_strings": ["patientId"],
+  {{ template "input_headers_auth.tmpl" . }},
+  "extra_config": {
+    "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
+    {{ template "jwt_validator.tmpl" . }}
+  },
+  "backend": [{
+    "url_pattern": "/appointments",
+    "host": ["{{ .hosts.appointment_service }}"],
+    "encoding": "json",
+    "extra_config": {
+      {{ template "rate_limit_proxy.tmpl" . }},
+      {{ template "circuit_breaker.tmpl" . }}
+    }
+  }]
+},
+{  "endpoint": "/api/v1/appointments",
   "method": "POST",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 100, "capacity": 100 },
     {{ template "jwt_validator.tmpl" . }}
@@ -18,6 +38,7 @@
 {
   "endpoint": "/api/v1/appointments/{appointmentId}",
   "method": "GET",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
     {{ template "jwt_validator.tmpl" . }}
@@ -35,6 +56,7 @@
 {
   "endpoint": "/api/v1/appointments/{appointmentId}/confirm",
   "method": "PUT",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     {{ template "jwt_validator.tmpl" . }}
   },
@@ -51,6 +73,7 @@
 {
   "endpoint": "/api/v1/appointments/{appointmentId}/cancel",
   "method": "PUT",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     {{ template "jwt_validator.tmpl" . }}
   },
@@ -67,6 +90,7 @@
 {
   "endpoint": "/api/v1/slots",
   "method": "POST",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     {{ template "jwt_validator.tmpl" . }}
   },
@@ -83,6 +107,7 @@
 {
   "endpoint": "/api/v1/web/patient-overview/{patientId}",
   "method": "GET",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 100, "capacity": 100 },
     {{ template "jwt_validator.tmpl" . }}

@@ -18,10 +18,23 @@ export class AuthService {
   constructor() {
     this.oauthService.configure(authConfig);
     this.oauthService.setupAutomaticSilentRefresh();
-    this.oauthService.loadDiscoveryDocumentAndTryLogin().then(() => {
-      if (this.oauthService.hasValidAccessToken()) {
+
+    // token_received fires after code exchange completes.
+    // Use window.location.replace so the redirect is guaranteed — router.navigate()
+    // can be silently cancelled if Angular's initial navigation is still in flight.
+    this.oauthService.events.subscribe(e => {
+      if (e.type === 'token_received') {
         this.isAuthenticated.set(true);
-        this.loadCurrentUser().then(() => this.router.navigate(['/dashboard']));
+        this.loadCurrentUser();
+        window.location.replace('/dashboard');
+      }
+    });
+
+    // Handles returning users whose token is already in sessionStorage
+    this.oauthService.loadDiscoveryDocumentAndTryLogin().then(() => {
+      if (this.oauthService.hasValidAccessToken() && !this.isAuthenticated()) {
+        this.isAuthenticated.set(true);
+        this.loadCurrentUser();
       }
     }).catch(err => console.error('OAuth Error:', err));
   }
@@ -35,7 +48,7 @@ export class AuthService {
     }
   }
 
-  public login() { this.oauthService.initCodeFlow(); }
+  public login() { this.oauthService.loadDiscoveryDocumentAndLogin(); }
 
   public register() {
     const issuer = authConfig.issuer!.replace(/\/$/, '');

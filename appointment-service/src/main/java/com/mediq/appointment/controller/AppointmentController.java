@@ -11,6 +11,8 @@ import com.mediq.appointment.temporal.workflow.AppointmentBookingWorkflow;
 import com.mediq.appointment.temporal.workflow.BookingRequest;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +28,8 @@ import java.util.UUID;
 
 @RestController
 public class AppointmentController {
+
+    private static final Logger log = LoggerFactory.getLogger(AppointmentController.class);
 
     private final AppointmentService appointmentService;
     private final AppointmentSlotRepository slotRepository;
@@ -48,7 +52,9 @@ public class AppointmentController {
     public ResponseEntity<Map<String, Object>> listAppointments(
             @RequestParam(required = false) UUID patientId,
             @RequestParam(required = false) UUID doctorId) {
+        log.debug("GET /appointments patientId={} doctorId={}", patientId, doctorId);
         List<AppointmentResponse> items = appointmentService.listAppointments(patientId, doctorId);
+        log.debug("GET /appointments returning {} items", items.size());
         return ResponseEntity.ok(Map.of("appointments", items));
     }
 
@@ -58,6 +64,8 @@ public class AppointmentController {
             @RequestBody BookAppointmentRequest request,
             @RequestHeader(value = "X-User-Id", required = false) String userId,
             @RequestHeader(value = "X-User-Email", required = false) String userEmail) {
+
+        log.info("POST /appointments userId={} slotId={} amount={}", userId, request.slotId(), request.amount());
 
         UUID patientId = request.patientId() != null
             ? request.patientId()
@@ -70,6 +78,8 @@ public class AppointmentController {
                 .orElse(null);
         }
 
+        log.debug("Resolved patientId={} doctorId={}", patientId, doctorId);
+
         BookingRequest bookingRequest = new BookingRequest(
             patientId,
             doctorId,
@@ -79,6 +89,7 @@ public class AppointmentController {
         );
 
         String workflowId = "appointment-" + UUID.randomUUID();
+        log.info("Starting Temporal workflow id={} taskQueue={}", workflowId, taskQueue);
 
         AppointmentBookingWorkflow workflow = workflowClient.newWorkflowStub(
             AppointmentBookingWorkflow.class,
@@ -89,6 +100,7 @@ public class AppointmentController {
                 .build());
 
         WorkflowClient.start(workflow::bookAppointment, bookingRequest);
+        log.info("Temporal workflow started workflowId={}", workflowId);
 
         return ResponseEntity.accepted().body(Map.of(
             "workflowId", workflowId,
@@ -101,11 +113,14 @@ public class AppointmentController {
     @PreAuthorize("hasAuthority('READ_OWN_APPOINTMENT') or hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> getBookingStatus(
             @PathVariable String workflowId) {
+        log.debug("GET /appointments/{}/status", workflowId);
         AppointmentBookingWorkflow workflow = workflowClient.newWorkflowStub(
             AppointmentBookingWorkflow.class, workflowId);
+        String status = workflow.getBookingStatus();
+        log.debug("Workflow {} status={}", workflowId, status);
         return ResponseEntity.ok(Map.of(
             "workflowId", workflowId,
-            "status", workflow.getBookingStatus()
+            "status", status
         ));
     }
 
@@ -113,6 +128,7 @@ public class AppointmentController {
     @PreAuthorize("hasAuthority('READ_OWN_APPOINTMENT') or hasRole('ADMIN')")
     public ResponseEntity<AppointmentResponse> getAppointment(
             @PathVariable UUID appointmentId) {
+        log.debug("GET /appointments/{}", appointmentId);
         return ResponseEntity.ok(appointmentService.getAppointment(appointmentId));
     }
 
@@ -120,6 +136,7 @@ public class AppointmentController {
     @PreAuthorize("hasAuthority('CONFIRM_APPOINTMENT') or hasRole('ADMIN')")
     public ResponseEntity<AppointmentResponse> confirmAppointment(
             @PathVariable UUID appointmentId) {
+        log.info("PUT /appointments/{}/confirm", appointmentId);
         return ResponseEntity.ok(appointmentService.confirmAppointment(appointmentId));
     }
 
@@ -129,12 +146,14 @@ public class AppointmentController {
             @PathVariable UUID appointmentId,
             @RequestBody(required = false) Map<String, String> body) {
         String reason = body != null ? body.get("reason") : null;
+        log.info("PUT /appointments/{}/cancel reason={}", appointmentId, reason);
         return ResponseEntity.ok(appointmentService.cancelAppointment(appointmentId, reason));
     }
 
     @PostMapping("/slots")
     @PreAuthorize("hasAuthority('WRITE_APPOINTMENT_SLOT') or hasRole('ADMIN')")
     public ResponseEntity<SlotResponse> createSlot(@RequestBody CreateSlotRequest request) {
+        log.info("POST /slots doctorId={} date={}", request.doctorId(), request.slotDate());
         return ResponseEntity.ok(appointmentService.createSlot(request));
     }
 
@@ -143,6 +162,7 @@ public class AppointmentController {
     public ResponseEntity<List<AppointmentSlotEntity>> getSlots(
             @RequestParam UUID doctorId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        log.debug("GET /slots doctorId={} date={}", doctorId, date);
         return ResponseEntity.ok(slotRepository.findByDoctorIdAndSlotDate(doctorId, date));
     }
 }

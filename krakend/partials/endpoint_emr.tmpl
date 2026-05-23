@@ -1,6 +1,7 @@
-﻿{
-  "endpoint": "/api/v1/emr/patients/{patientId}/events/{eventType}",
+
+{  "endpoint": "/api/v1/emr/patients/{patientId}/events/{eventType}",
   "method": "POST",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 50, "capacity": 50 },
     {{ template "jwt_validator.tmpl" . }}
@@ -18,6 +19,7 @@
 {
   "endpoint": "/api/v1/emr/patients/{patientId}/current",
   "method": "GET",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 200, "capacity": 200 },
     {{ template "jwt_validator.tmpl" . }}
@@ -35,6 +37,7 @@
 {
   "endpoint": "/api/v1/emr/patients/{patientId}/history",
   "method": "GET",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 100, "capacity": 100 },
     {{ template "jwt_validator.tmpl" . }}
@@ -52,6 +55,7 @@
 {
   "endpoint": "/api/v1/emr/patients/{patientId}/as-of",
   "method": "GET",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 50, "capacity": 50 },
     {{ template "jwt_validator.tmpl" . }}

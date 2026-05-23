@@ -3,6 +3,8 @@ package com.mediq.controller;
 import com.mediq.dto.UserResponse;
 import com.mediq.model.UserType;
 import com.mediq.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,6 +18,8 @@ import java.util.UUID;
 @RequestMapping("/admin/users")
 public class AdminUserController {
 
+    private static final Logger log = LoggerFactory.getLogger(AdminUserController.class);
+
     private final UserService userService;
 
     public AdminUserController(UserService userService) {
@@ -25,6 +29,7 @@ public class AdminUserController {
     @GetMapping
     @PreAuthorize("hasAuthority('READ_ANY_PROFILE')")
     public ResponseEntity<List<UserResponse>> listAllUsers() {
+        log.debug("GET /admin/users");
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
@@ -32,6 +37,7 @@ public class AdminUserController {
     @PreAuthorize("hasAuthority('DEACTIVATE_USER')")
     public ResponseEntity<UserResponse> activateUser(@PathVariable UUID userId) {
         String adminId = principal();
+        log.info("PUT /admin/users/{}/activate adminId={}", userId, adminId);
         return ResponseEntity.ok(userService.activateUser(userId, UUID.fromString(adminId)));
     }
 
@@ -39,6 +45,7 @@ public class AdminUserController {
     @PreAuthorize("hasAuthority('DEACTIVATE_USER')")
     public ResponseEntity<UserResponse> deactivateUser(@PathVariable UUID userId) {
         String adminId = principal();
+        log.info("PUT /admin/users/{}/deactivate adminId={}", userId, adminId);
         return ResponseEntity.ok(userService.deactivateUser(userId, UUID.fromString(adminId)));
     }
 
@@ -49,10 +56,12 @@ public class AdminUserController {
             @RequestBody Map<String, String> body) {
         String roleStr = body.get("role");
         if (roleStr == null || roleStr.isBlank()) {
+            log.warn("PUT /admin/users/{}/role — missing role in request body", userId);
             return ResponseEntity.badRequest().build();
         }
         UserType newRole = UserType.valueOf(roleStr.toUpperCase());
         String adminId = principal();
+        log.info("PUT /admin/users/{}/role newRole={} adminId={}", userId, newRole, adminId);
         return ResponseEntity.ok(userService.changeUserRole(userId, newRole,
             UUID.fromString(adminId)));
     }

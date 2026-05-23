@@ -9,6 +9,7 @@ import org.keycloak.models.SubjectCredentialManager;
 import org.keycloak.storage.StorageId;
 import org.keycloak.storage.adapter.AbstractUserAdapter;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +72,13 @@ public class MediqUserAdapter extends AbstractUserAdapter {
         return Set.of(role);
     }
 
+    // Override to prevent Keycloak's default-roles-mediq composite (offline_access,
+    // uma_authorization) from being merged in — SPI users get only their business role.
+    @Override
+    public Set<RoleModel> getRoleMappings() {
+        return getRoleMappingsInternal();
+    }
+
     @Override
     public Map<String, List<String>> getAttributes() {
         Map<String, List<String>> attrs = new HashMap<>();
@@ -80,7 +88,7 @@ public class MediqUserAdapter extends AbstractUserAdapter {
         attrs.put("lastName",    List.of(row.lastName));
         attrs.put("userId",      List.of(row.id.toString()));
         attrs.put("userType",    List.of(row.userType));
-        attrs.put("permissions", List.of(String.join(",", row.permissions)));
+        attrs.put("permissions", new ArrayList<>(row.permissions));
         return attrs;
     }
 }

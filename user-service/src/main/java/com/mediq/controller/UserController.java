@@ -32,15 +32,19 @@ public class UserController {
     @PostMapping("/patients/register")
     public ResponseEntity<UserResponse> registerPatient(
             @Valid @RequestBody RegisterPatientRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(userService.registerPatient(request));
+        log.info("POST /users/patients/register firstName={}", request.firstName());
+        UserResponse response = userService.registerPatient(request);
+        log.info("Patient registered userId={}", response.id());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/doctors/register")
     public ResponseEntity<UserResponse> registerDoctor(
             @Valid @RequestBody RegisterDoctorRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(userService.registerDoctor(request));
+        log.info("POST /users/doctors/register firstName={}", request.firstName());
+        UserResponse response = userService.registerDoctor(request);
+        log.info("Doctor registered userId={}", response.id());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     // ── Protected endpoints (JWT required via KrakenD) ────────────────────────
@@ -50,12 +54,14 @@ public class UserController {
     public ResponseEntity<UserResponse> getMe() {
         String userId = (String) SecurityContextHolder.getContext()
             .getAuthentication().getPrincipal();
+        log.debug("GET /users/me userId={}", userId);
         return ResponseEntity.ok(userService.getUserById(UUID.fromString(userId)));
     }
 
     @GetMapping("/{userId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserResponse> getUserById(@PathVariable UUID userId) {
+        log.debug("GET /users/{}", userId);
         return ResponseEntity.ok(userService.getUserById(userId));
     }
 
@@ -64,6 +70,7 @@ public class UserController {
     public ResponseEntity<UserResponse> deactivateUser(@PathVariable UUID userId) {
         String currentUserId = (String) SecurityContextHolder.getContext()
             .getAuthentication().getPrincipal();
+        log.info("DELETE /users/{} requestedBy={}", userId, currentUserId);
         return ResponseEntity.ok(userService.deactivateUser(userId,
             UUID.fromString(currentUserId)));
     }
@@ -73,6 +80,7 @@ public class UserController {
     @GetMapping("/doctors/pending-verification")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserResponse>> getPendingVerifications() {
+        log.debug("GET /users/doctors/pending-verification");
         return ResponseEntity.ok(userService.getPendingDoctorVerifications());
     }
 
@@ -83,6 +91,7 @@ public class UserController {
             @Valid @RequestBody DoctorVerificationRequest request) {
         String adminId = (String) SecurityContextHolder.getContext()
             .getAuthentication().getPrincipal();
+        log.info("PUT /users/doctors/{}/verify status={} adminId={}", doctorUserId, request.status(), adminId);
         return ResponseEntity.ok(userService.verifyDoctor(doctorUserId, request,
             UUID.fromString(adminId)));
     }

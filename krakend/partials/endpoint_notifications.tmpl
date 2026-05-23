@@ -1,6 +1,8 @@
-﻿{
-  "endpoint": "/api/v1/notifications/user/{userId}",
+
+{  "endpoint": "/api/v1/notifications/user/{userId}",
   "method": "GET",
+  "output_encoding": "no-op",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 200, "capacity": 200 },
     {{ template "jwt_validator.tmpl" . }}
@@ -8,7 +10,7 @@
   "backend": [{
     "url_pattern": "/notifications/user/{userId}",
     "host": ["{{ .hosts.notification_service }}"],
-    "encoding": "json",
+    "encoding": "no-op",
     "extra_config": {
       {{ template "rate_limit_proxy.tmpl" . }},
       {{ template "circuit_breaker.tmpl" . }}

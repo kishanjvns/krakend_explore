@@ -1,5 +1,5 @@
-﻿{
-  "endpoint": "/api/v1/doctors/search",
+
+{  "endpoint": "/api/v1/doctors/search",
   "method": "GET",
   "output_encoding": "no-op",
   "backend": [{
@@ -15,6 +15,7 @@
 {
   "endpoint": "/api/v1/doctors/{doctorId}",
   "method": "GET",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
     {{ template "jwt_validator.tmpl" . }}
@@ -46,6 +47,7 @@
 {
   "endpoint": "/api/v1/mobile/doctors/{doctorId}",
   "method": "GET",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 500, "capacity": 500 },
     {{ template "jwt_validator.tmpl" . }}
@@ -64,6 +66,7 @@
 {
   "endpoint": "/api/v1/web/doctor-overview/{doctorId}",
   "method": "GET",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 200, "capacity": 200 },
     {{ template "jwt_validator.tmpl" . }}

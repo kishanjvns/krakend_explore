@@ -6,6 +6,8 @@ import com.mediq.analytics.model.PlatformMetricEntity;
 import com.mediq.analytics.repository.DailyAppointmentSummaryRepository;
 import com.mediq.analytics.repository.DoctorPerformanceSummaryRepository;
 import com.mediq.analytics.repository.PlatformMetricRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,6 +21,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/analytics")
 public class AnalyticsDashboardController {
+
+    private static final Logger log = LoggerFactory.getLogger(AnalyticsDashboardController.class);
 
     private final DailyAppointmentSummaryRepository dailyRepo;
     private final DoctorPerformanceSummaryRepository doctorPerfRepo;
@@ -35,6 +39,7 @@ public class AnalyticsDashboardController {
     @GetMapping("/dashboard")
     @PreAuthorize("hasAuthority('READ_ANALYTICS') or hasAuthority('READ_OWN_ANALYTICS')")
     public ResponseEntity<Map<String, Object>> getDashboard() {
+        log.debug("GET /analytics/dashboard");
         List<PlatformMetricEntity> metrics = metricRepo.findAll();
         Map<String, Long> metricsMap = new HashMap<>();
         for (PlatformMetricEntity m : metrics) {
@@ -52,6 +57,7 @@ public class AnalyticsDashboardController {
                 ))
                 .orElse(Map.of("date", today, "booked", 0, "confirmed", 0, "cancelled", 0, "completed", 0));
 
+        log.debug("GET /analytics/dashboard returning {} platform metrics", metricsMap.size());
         return ResponseEntity.ok(Map.of(
                 "platformMetrics", metricsMap,
                 "todayAppointments", todayAppointments
@@ -66,6 +72,7 @@ public class AnalyticsDashboardController {
 
         LocalDate start = from != null ? from : LocalDate.now().minusDays(30);
         LocalDate end = to != null ? to : LocalDate.now();
+        log.debug("GET /analytics/appointments/daily from={} to={}", start, end);
         return ResponseEntity.ok(dailyRepo.findBySummaryDateBetweenOrderBySummaryDateAsc(start, end));
     }
 
@@ -75,6 +82,7 @@ public class AnalyticsDashboardController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
         LocalDate target = date != null ? date : LocalDate.now();
+        log.debug("GET /analytics/doctors/performance date={}", target);
         return ResponseEntity.ok(doctorPerfRepo.findBySummaryDate(target));
     }
 }

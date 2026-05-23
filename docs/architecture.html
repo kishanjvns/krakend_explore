@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mediq Platform — Architecture &amp; Interaction Map</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0d1117;
+    --surface:  #161b22;
+    --border:   #30363d;
+    --text:     #c9d1d9;
+    --muted:    #8b949e;
+    --blue:     #58a6ff;
+    --purple:   #bc8cff;
+    --green:    #3fb950;
+    --orange:   #f0883e;
+    --red:      #ff7b72;
+    --yellow:   #e3b341;
+    --teal:     #39d353;
+    --cyan:     #79c0ff;
+    --pink:     #f778ba;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #0d1117ee;
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 32px;
+    display: flex; gap: 24px; align-items: center;
+    flex-wrap: wrap;
+  }
+  nav .brand { font-weight: 700; font-size: 15px; color: var(--blue); white-space: nowrap; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 13px; white-space: nowrap; }
+  nav a:hover { color: var(--text); }
+
+  /* ── LAYOUT ── */
+  .page { max-width: 1400px; margin: 0 auto; padding: 40px 32px 80px; }
+
+  h1 { font-size: 28px; color: var(--text); margin-bottom: 6px; }
+  .subtitle { color: var(--muted); margin-bottom: 48px; }
+
+  h2 {
+    font-size: 18px; color: var(--text);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px; margin-bottom: 24px; margin-top: 56px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2 .badge {
+    font-size: 11px; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; background: var(--surface);
+    border: 1px solid var(--border); color: var(--muted);
+  }
+
+  /* ── CHIP / TAG ── */
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .chip-blue   { background: #58a6ff22; border: 1px solid #58a6ff55; color: var(--blue);   }
+  .chip-purple { background: #bc8cff22; border: 1px solid #bc8cff55; color: var(--purple); }
+  .chip-green  { background: #3fb95022; border: 1px solid #3fb95055; color: var(--green);  }
+  .chip-orange { background: #f0883e22; border: 1px solid #f0883e55; color: var(--orange); }
+  .chip-red    { background: #ff7b7222; border: 1px solid #ff7b7255; color: var(--red);    }
+  .chip-yellow { background: #e3b34122; border: 1px solid #e3b34155; color: var(--yellow); }
+  .chip-teal   { background: #39d35322; border: 1px solid #39d35355; color: #39d353;       }
+  .chip-cyan   { background: #79c0ff22; border: 1px solid #79c0ff55; color: var(--cyan);   }
+  .chip-pink   { background: #f778ba22; border: 1px solid #f778ba55; color: var(--pink);   }
+  .chip-gray   { background: #8b949e22; border: 1px solid #8b949e55; color: var(--muted);  }
+
+  /* ── SERVICE BOX ── */
+  .svc-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 6px;
+    min-width: 140px;
+  }
+  .svc-box .svc-name { font-weight: 700; font-size: 13px; }
+  .svc-box .svc-port { font-size: 11px; color: var(--muted); }
+
+  /* ── ARCHITECTURE DIAGRAM ── */
+  .arch-diagram {
+    display: flex; flex-direction: column; gap: 0;
+  }
+
+  .arch-layer {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .arch-layer-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted);
+    padding: 0 0 6px 0;
+  }
+  .arch-layer-row {
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: stretch;
+  }
+
+  .arch-connector {
+    display: flex; align-items: center; justify-content: center;
+    padding: 6px 0; gap: 16px; flex-wrap: wrap;
+  }
+  .arch-connector .arrow-line {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    color: var(--muted); font-size: 11px;
+  }
+  .arch-connector .arrow-line span:first-child {
+    width: 2px; height: 20px;
+    background: var(--border);
+  }
+
+  /* colored left border accent */
+  .accent-blue   { border-left: 3px solid var(--blue);   }
+  .accent-purple { border-left: 3px solid var(--purple); }
+  .accent-green  { border-left: 3px solid var(--green);  }
+  .accent-orange { border-left: 3px solid var(--orange); }
+  .accent-red    { border-left: 3px solid var(--red);    }
+  .accent-yellow { border-left: 3px solid var(--yellow); }
+  .accent-teal   { border-left: 3px solid #39d353;       }
+  .accent-cyan   { border-left: 3px solid var(--cyan);   }
+  .accent-pink   { border-left: 3px solid var(--pink);   }
+  .accent-gray   { border-left: 3px solid var(--border); }
+
+  /* ── FLOW DIAGRAM (swimlane) ── */
+  .flow-grid {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .flow-actor {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 12px 14px;
+    font-weight: 600; font-size: 12px;
+    display: flex; align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .flow-actor:last-of-type { border-bottom: none; }
+  .flow-steps {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .flow-steps:last-of-type { border-bottom: none; }
+  .flow-step {
+    display: flex; align-items: flex-start; gap: 8px; font-size: 13px;
+  }
+  .flow-step .arrow { color: var(--orange); font-size: 14px; flex-shrink: 0; }
+  .flow-step .sync  { color: var(--blue);   font-size: 11px; font-weight: 600; background: #58a6ff18; padding: 1px 6px; border-radius: 4px; }
+  .flow-step .async { color: var(--orange); font-size: 11px; font-weight: 600; background: #f0883e18; padding: 1px 6px; border-radius: 4px; }
+  .flow-step .note  { color: var(--muted);  font-size: 11px; }
+
+  /* ── KAFKA MATRIX ── */
+  .kafka-matrix {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .kafka-matrix table {
+    width: 100%; border-collapse: collapse;
+  }
+  .kafka-matrix th {
+    background: var(--surface);
+    padding: 10px 14px;
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--muted);
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .kafka-matrix td {
+    padding: 10px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .kafka-matrix tr:last-child td { border-bottom: none; }
+  .kafka-matrix tr:hover td { background: #ffffff08; }
+  .topic-pill {
+    display: inline-block;
+    background: #f0883e18; border: 1px solid #f0883e44;
+    color: var(--orange); font-size: 12px; font-weight: 600;
+    padding: 2px 8px; border-radius: 4px; font-family: monospace;
+    white-space: nowrap;
+  }
+  .producer-tag { color: var(--green);  font-size: 11px; font-weight: 700; }
+  .consumer-tag { color: var(--blue);   font-size: 11px; font-weight: 700; }
+
+  /* ── ROUTE TABLE ── */
+  .route-table { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+  .route-table table { width: 100%; border-collapse: collapse; }
+  .route-table th {
+    background: var(--surface); padding: 10px 14px;
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--muted);
+    text-align: left; border-bottom: 1px solid var(--border);
+  }
+  .route-table td {
+    padding: 9px 14px; font-size: 13px;
+    border-bottom: 1px solid var(--border); vertical-align: middle;
+  }
+  .route-table tr:last-child td { border-bottom: none; }
+  .route-table tr:hover td { background: #ffffff08; }
+  code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px; background: #ffffff12; padding: 1px 6px;
+    border-radius: 4px; color: var(--cyan);
+  }
+  .method { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+  .get    { background: #3fb95022; color: var(--green);  }
+  .post   { background: #58a6ff22; color: var(--blue);   }
+  .put    { background: #e3b34122; color: var(--yellow); }
+  .delete { background: #ff7b7222; color: var(--red);    }
+
+  /* ── INFRA CARD GRID ── */
+  .infra-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .infra-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .infra-card .infra-icon { font-size: 24px; margin-bottom: 8px; }
+  .infra-card .infra-name { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .infra-card .infra-port { font-family: monospace; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .infra-card .infra-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex; gap: 20px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 20px; margin-bottom: 32px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .legend-line { height: 2px; width: 32px; }
+  .legend-line.sync  { background: var(--blue); }
+  .legend-line.async { background: var(--orange); border-top: 2px dashed var(--orange); background: none; }
+  .legend-line.db    { background: var(--red); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* ── TEMPORAL FLOW ── */
+  .temporal-steps {
+    display: flex; flex-direction: column; gap: 0;
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  .temporal-step {
+    display: grid; grid-template-columns: 40px 200px 1fr;
+    align-items: center; padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .temporal-step:last-child { border-bottom: none; }
+  .temporal-step:hover { background: #ffffff06; }
+  .ts-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12px;
+    background: #e3b34122; border: 1px solid #e3b34155; color: var(--yellow);
+    flex-shrink: 0;
+  }
+  .ts-actor { font-weight: 600; font-size: 13px; }
+  .ts-action { font-size: 13px; color: var(--muted); padding-left: 16px; }
+  .ts-action strong { color: var(--text); }
+
+  /* ── SECTION DIVIDER ── */
+  .section-intro {
+    color: var(--muted); font-size: 14px; margin-bottom: 20px; line-height: 1.7;
+  }
+
+  /* ── BIG ARCHITECTURE SVG DIAGRAM ── */
+  .arch-svg-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    overflow-x: auto;
+  }
+
+  /* ── VISUAL ARCH LAYERS ── */
+  .visual-arch {
+    display: flex; flex-direction: column; gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    overflow: hidden;
+  }
+
+  .va-row {
+    display: flex; gap: 10px; align-items: stretch;
+  }
+  .va-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted);
+    min-width: 28px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .va-boxes { display: flex; gap: 10px; flex: 1; align-items: stretch; flex-wrap: wrap; }
+
+  .va-box {
+    flex: 1; min-width: 120px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .va-box .vab-name { font-weight: 700; font-size: 13px; }
+  .va-box .vab-port { font-size: 11px; color: var(--muted); font-family: monospace; }
+  .va-box .vab-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+
+  .va-connector {
+    display: flex; align-items: center; justify-content: center;
+    padding: 2px 0; color: var(--border);
+    font-size: 11px; gap: 4px;
+  }
+  .va-connector .vc-line {
+    flex: 1; height: 1px; background: var(--border);
+  }
+  .va-connector .vc-arrow { color: var(--muted); font-size: 16px; }
+  .va-connector .vc-label {
+    color: var(--muted); font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    background: var(--surface); padding: 0 8px;
+  }
+
+  /* full-width connector between layers */
+  .layer-arrow {
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; padding: 4px 0; gap: 2px;
+  }
+  .la-vert { width: 2px; height: 14px; background: var(--border); }
+  .la-head { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid var(--border); }
+  .la-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* colored arrow lines */
+  .la-sync  .la-vert { background: var(--blue);   }
+  .la-sync  .la-head { border-top-color: var(--blue);   }
+  .la-async .la-vert { background: var(--orange); border-left: none; background: repeating-linear-gradient(to bottom, var(--orange) 0, var(--orange) 4px, transparent 4px, transparent 8px); }
+  .la-async .la-head { border-top-color: var(--orange); }
+
+  .sep { height: 1px; background: var(--border); opacity: 0.4; margin: 8px 0; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">🏥 Mediq Platform</span>
+  <a href="#overview">Overview</a>
+  <a href="#sync">Sync Flows</a>
+  <a href="#kafka">Kafka / Async</a>
+  <a href="#auth">Auth Flow</a>
+  <a href="#temporal">Temporal Workflow</a>
+  <a href="#observability">Observability</a>
+  <a href="#ports">Service Index</a>
+</nav>
+
+<div class="page">
+
+  <h1>Mediq Platform — Architecture &amp; Interaction Map</h1>
+  <p class="subtitle">Complete interaction reference: microservices · infrastructure · sync/async boundaries</p>
+
+  <!-- ═══════════════════════════════════════════════════════════ LEGEND -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-line sync"></div> Synchronous (REST/HTTP)</div>
+    <div class="legend-item"><div class="legend-line async"></div> Asynchronous (Kafka event)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div> Frontend / Gateway</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div> Identity (Keycloak + SPI)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Microservice</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> Messaging (Kafka)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Data stores</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> Workflow (Temporal)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div> Observability</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ OVERVIEW -->
+  <h2 id="overview">System Overview <span class="badge">layered architecture</span></h2>
+
+  <div class="visual-arch">
+
+    <!-- Layer: Client -->
+    <div class="va-row">
+      <div class="va-label" style="color:var(--blue)">Client</div>
+      <div class="va-boxes">
+        <div class="va-box accent-blue" style="max-width:280px">
+          <div class="vab-name">🌐 Angular Frontend</div>
+          <div class="vab-port">localhost:4200 (dev)</div>
+          <div class="vab-tags">
+            <span class="chip chip-blue">PKCE OAuth2</span>
+            <span class="chip chip-gray">mediq-frontend-spa</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="layer-arrow la-sync">
+      <div class="la-vert"></div><div class="la-head"></div>
+      <div class="la-label">HTTPS + JWT Bearer</div>
+    </div>
+
+    <!-- Layer: Gateway + Identity -->
+    <div class="va-row">
+      <div class="va-label" style="color:var(--purple)">Gateway</div>
+      <div class="va-boxes">
+        <div class="va-box accent-blue">
+          <div class="vab-name">⚡ KrakenD</div>
+          <div class="vab-port">:8080</div>
+          <div class="vab-tags">
+            <span class="chip chip-blue">JWT Validate</span>
+            <span class="chip chip-cyan">Rate Limit</span>
+            <span class="chip chip-gray">Circuit Breaker</span>
+            <span class="chip chip-gray">CORS</span>
+          </div>
+        </div>
+        <div class="va-box accent-purple">
+          <div class="vab-name">🔐 Keycloak</div>
+          <div class="vab-port">:8090 · realm: mediq</div>
+          <div class="vab-tags">
+            <span class="chip chip-purple">OIDC / PKCE</span>
+            <span class="chip chip-purple">RS256 JWT</span>
+            <span class="chip chip-pink">User SPI</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="layer-arrow la-sync">
+      <div class="la-vert"></div><div class="la-head"></div>
+      <div class="la-label">REST (X-User-* headers propagated)</div>
+    </div>
+
+    <!-- Layer: Microservices -->
+    <div class="va-row">
+      <div class="va-label" style="color:var(--green)">Services</div>
+      <div class="va-boxes">
+        <div class="va-box accent-green">
+          <div class="vab-name">👤 user-service</div>
+          <div class="vab-port">:8081</div>
+          <div class="vab-tags"><span class="chip chip-orange">PRODUCES</span><span class="chip chip-gray">mediq.user.events</span></div>
+        </div>
+        <div class="va-box accent-green">
+          <div class="vab-name">🩺 doctor-service</div>
+          <div class="vab-port">:8083</div>
+          <div class="vab-tags"><span class="chip chip-orange">PRODUCES</span><span class="chip chip-blue">CONSUMES</span></div>
+        </div>
+        <div class="va-box accent-green">
+          <div class="vab-name">📅 appointment-service</div>
+          <div class="vab-port">:8084</div>
+          <div class="vab-tags"><span class="chip chip-orange">PRODUCES</span><span class="chip chip-blue">CONSUMES</span><span class="chip chip-yellow">Temporal</span></div>
+        </div>
+        <div class="va-box accent-green">
+          <div class="vab-name">🔔 notification-service</div>
+          <div class="vab-port">:8085</div>
+          <div class="vab-tags"><span class="chip chip-blue">CONSUMES ×4</span><span class="chip chip-pink">Mailtrap</span></div>
+        </div>
+        <div class="va-box accent-green">
+          <div class="vab-name">💳 payment-service</div>
+          <div class="vab-port">:8089</div>
+          <div class="vab-tags"><span class="chip chip-orange">PRODUCES</span><span class="chip chip-red">Stripe</span></div>
+        </div>
+        <div class="va-box accent-green">
+          <div class="vab-name">🏥 emr-service</div>
+          <div class="vab-port">:8086</div>
+          <div class="vab-tags"><span class="chip chip-gray">Event Store</span></div>
+        </div>
+        <div class="va-box accent-green">
+          <div class="vab-name">📊 analytics-service</div>
+          <div class="vab-port">:8087</div>
+          <div class="vab-tags"><span class="chip chip-blue">CONSUMES CDC</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="layer-arrow la-async">
+      <div class="la-vert"></div><div class="la-head"></div>
+      <div class="la-label">Outbox → Debezium CDC → Kafka Topics</div>
+    </div>
+
+    <!-- Layer: Messaging -->
+    <div class="va-row">
+      <div class="va-label" style="color:var(--orange)">Messaging</div>
+      <div class="va-boxes">
+        <div class="va-box accent-orange">
+          <div class="vab-name">📨 Kafka</div>
+          <div class="vab-port">:9092 · Zookeeper :2181</div>
+          <div class="vab-tags">
+            <span class="chip chip-orange">mediq.user.events</span>
+            <span class="chip chip-orange">mediq.doctor.events</span>
+            <span class="chip chip-orange">mediq.appointment.events</span>
+            <span class="chip chip-orange">mediq.payment.events</span>
+          </div>
+        </div>
+        <div class="va-box accent-orange">
+          <div class="vab-name">🔄 Debezium Connect</div>
+          <div class="vab-port">:8091–8094 (one per service)</div>
+          <div class="vab-tags">
+            <span class="chip chip-gray">CDC outbox relay</span>
+            <span class="chip chip-gray">WAL logical replication</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="layer-arrow la-sync">
+      <div class="la-vert"></div><div class="la-head"></div>
+      <div class="la-label">JDBC / @Transactional</div>
+    </div>
+
+    <!-- Layer: Data -->
+    <div class="va-row">
+      <div class="va-label" style="color:var(--red)">Data</div>
+      <div class="va-boxes">
+        <div class="va-box accent-red">
+          <div class="vab-name">🗄️ PostgreSQL</div>
+          <div class="vab-port">:5432</div>
+          <div class="vab-tags">
+            <span class="chip chip-red">mediq_users</span>
+            <span class="chip chip-red">mediq_doctors</span>
+            <span class="chip chip-red">mediq_appointments</span>
+            <span class="chip chip-red">mediq_notifications</span>
+            <span class="chip chip-red">mediq_payments</span>
+            <span class="chip chip-red">mediq_emr</span>
+            <span class="chip chip-red">mediq_analytics</span>
+          </div>
+        </div>
+        <div class="va-box accent-red">
+          <div class="vab-name">⚡ Redis</div>
+          <div class="vab-port">:6379</div>
+          <div class="vab-tags">
+            <span class="chip chip-red">OTP (5m TTL)</span>
+            <span class="chip chip-red">User cache (30m TTL)</span>
+            <span class="chip chip-red">JWT JTI blacklist</span>
+          </div>
+        </div>
+        <div class="va-box accent-yellow">
+          <div class="vab-name">⏱️ Temporal</div>
+          <div class="vab-port">:7233 · UI :8088</div>
+          <div class="vab-tags">
+            <span class="chip chip-yellow">mediq-appointments ns</span>
+            <span class="chip chip-yellow">appointment-booking-queue</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- Layer: Observability -->
+    <div class="va-row">
+      <div class="va-label" style="color:var(--teal)">Observe</div>
+      <div class="va-boxes">
+        <div class="va-box accent-teal">
+          <div class="vab-name">🔭 Jaeger</div>
+          <div class="vab-port">:16686 UI · :4317 OTLP</div>
+          <div class="vab-tags"><span class="chip chip-teal">Distributed Traces</span></div>
+        </div>
+        <div class="va-box accent-teal">
+          <div class="vab-name">📈 Prometheus</div>
+          <div class="vab-port">:9090</div>
+          <div class="vab-tags"><span class="chip chip-teal">Scrapes /actuator/prometheus</span></div>
+        </div>
+        <div class="va-box accent-teal">
+          <div class="vab-name">📊 Grafana</div>
+          <div class="vab-port">:3000</div>
+          <div class="vab-tags"><span class="chip chip-teal">Dashboards</span></div>
+        </div>
+        <div class="va-box accent-teal">
+          <div class="vab-name">📝 Loki + Promtail</div>
+          <div class="vab-port">:3100</div>
+          <div class="vab-tags"><span class="chip chip-teal">Log aggregation</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ SYNC FLOWS -->
+  <h2 id="sync">Synchronous Interactions <span class="badge">REST / HTTP</span></h2>
+  <p class="section-intro">All synchronous calls — frontend through KrakenD to microservices, plus direct service-to-service calls via Temporal activities.</p>
+
+  <div class="route-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>KrakenD Route</th>
+          <th>Downstream Service</th>
+          <th>Auth</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Auth / Register -->
+        <tr><td colspan="5" style="background:var(--surface);font-size:11px;font-weight:700;color:var(--muted);padding:8px 14px;text-transform:uppercase;letter-spacing:0.5px">Registration &amp; Auth</td></tr>
+        <tr>
+          <td><span class="method post">POST</span></td>
+          <td><code>/api/v1/users/patients/register</code></td>
+          <td><span class="chip chip-green">user-service</span></td>
+          <td>None</td>
+          <td>Triggers USER_REGISTERED event</td>
+        </tr>
+        <tr>
+          <td><span class="method post">POST</span></td>
+          <td><code>/api/v1/users/doctors/register</code></td>
+          <td><span class="chip chip-green">user-service</span></td>
+          <td>None</td>
+          <td>Triggers USER_REGISTERED (DOCTOR type)</td>
+        </tr>
+        <tr>
+          <td><span class="method post">POST</span></td>
+          <td><code>/api/v1/users/{userId}/send-otp</code></td>
+          <td><span class="chip chip-green">user-service</span></td>
+          <td>None</td>
+          <td>Stores OTP in Redis, publishes OTP_REQUESTED</td>
+        </tr>
+        <tr>
+          <td><span class="method post">POST</span></td>
+          <td><code>/api/v1/users/{userId}/verify-otp</code></td>
+          <td><span class="chip chip-green">user-service</span></td>
+          <td>None</td>
+          <td>Reads OTP from Redis, marks contact verified</td>
+        </tr>
+
+        <!-- Users -->
+        <tr><td colspan="5" style="background:var(--surface);font-size:11px;font-weight:700;color:var(--muted);padding:8px 14px;text-transform:uppercase;letter-spacing:0.5px">User Management</td></tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/users/{userId}</code></td>
+          <td><span class="chip chip-green">user-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td>X-User-Id, X-User-Role propagated</td>
+        </tr>
+        <tr>
+          <td><span class="method delete">DEL</span></td>
+          <td><code>/api/v1/users/{userId}</code></td>
+          <td><span class="chip chip-green">user-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td>Triggers USER_DEACTIVATED event</td>
+        </tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/users/doctors/pending-verification</code></td>
+          <td><span class="chip chip-green">user-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td>Admin only (enforced in service via X-User-Permissions)</td>
+        </tr>
+        <tr>
+          <td><span class="method put">PUT</span></td>
+          <td><code>/api/v1/users/doctors/{doctorUserId}/verify</code></td>
+          <td><span class="chip chip-green">user-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td>Triggers DOCTOR_VERIFIED event</td>
+        </tr>
+
+        <!-- Doctors -->
+        <tr><td colspan="5" style="background:var(--surface);font-size:11px;font-weight:700;color:var(--muted);padding:8px 14px;text-transform:uppercase;letter-spacing:0.5px">Doctors</td></tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/doctors/search</code></td>
+          <td><span class="chip chip-green">doctor-service</span></td>
+          <td>None</td>
+          <td>Public — DoctorSearchView read model</td>
+        </tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/doctors/{doctorId}</code></td>
+          <td><span class="chip chip-green">doctor-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/doctors/{doctorId}/availability</code></td>
+          <td><span class="chip chip-green">doctor-service</span></td>
+          <td>None</td>
+          <td>Public slot availability</td>
+        </tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/web/doctor-overview/{doctorId}</code></td>
+          <td><span class="chip chip-green">doctor-service</span> <span style="color:var(--muted)">×2 aggregated</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td>KrakenD aggregates profile + availability into one response</td>
+        </tr>
+
+        <!-- Appointments -->
+        <tr><td colspan="5" style="background:var(--surface);font-size:11px;font-weight:700;color:var(--muted);padding:8px 14px;text-transform:uppercase;letter-spacing:0.5px">Appointments</td></tr>
+        <tr>
+          <td><span class="method post">POST</span></td>
+          <td><code>/api/v1/appointments</code></td>
+          <td><span class="chip chip-green">appointment-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td>Starts Temporal workflow → payment → confirm</td>
+        </tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/appointments/{id}</code></td>
+          <td><span class="chip chip-green">appointment-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><span class="method put">PUT</span></td>
+          <td><code>/api/v1/appointments/{id}/confirm</code></td>
+          <td><span class="chip chip-green">appointment-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td>Triggers AppointmentConfirmed event</td>
+        </tr>
+        <tr>
+          <td><span class="method put">PUT</span></td>
+          <td><code>/api/v1/appointments/{id}/cancel</code></td>
+          <td><span class="chip chip-green">appointment-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td>Triggers AppointmentCancelled event</td>
+        </tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/web/patient-overview/{patientId}</code></td>
+          <td><span class="chip chip-green">user-service</span> <span style="color:var(--muted)">+ emr + appts</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td>KrakenD aggregates 3 backends</td>
+        </tr>
+
+        <!-- Payments -->
+        <tr><td colspan="5" style="background:var(--surface);font-size:11px;font-weight:700;color:var(--muted);padding:8px 14px;text-transform:uppercase;letter-spacing:0.5px">Payments</td></tr>
+        <tr>
+          <td><span class="method post">POST</span></td>
+          <td><code>/api/v1/payments/intent</code></td>
+          <td><span class="chip chip-green">payment-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td>Calls Stripe API, returns clientSecret</td>
+        </tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/payments/{paymentId}</code></td>
+          <td><span class="chip chip-green">payment-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td></td>
+        </tr>
+
+        <!-- EMR -->
+        <tr><td colspan="5" style="background:var(--surface);font-size:11px;font-weight:700;color:var(--muted);padding:8px 14px;text-transform:uppercase;letter-spacing:0.5px">EMR (Event Sourcing)</td></tr>
+        <tr>
+          <td><span class="method post">POST</span></td>
+          <td><code>/api/v1/emr/patients/{id}/events/{type}</code></td>
+          <td><span class="chip chip-green">emr-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td>Immutable event append, rate limit 50/min</td>
+        </tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/emr/patients/{id}/current</code></td>
+          <td><span class="chip chip-green">emr-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td>Replayed state, rate limit 200/min</td>
+        </tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/emr/patients/{id}/as-of?date=</code></td>
+          <td><span class="chip chip-green">emr-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td>Point-in-time replay</td>
+        </tr>
+
+        <!-- Analytics -->
+        <tr><td colspan="5" style="background:var(--surface);font-size:11px;font-weight:700;color:var(--muted);padding:8px 14px;text-transform:uppercase;letter-spacing:0.5px">Analytics</td></tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/analytics/dashboard</code></td>
+          <td><span class="chip chip-green">analytics-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td>Rate limit 60/min</td>
+        </tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/analytics/appointments/daily</code></td>
+          <td><span class="chip chip-green">analytics-service</span></td>
+          <td><span class="chip chip-purple">JWT</span></td>
+          <td></td>
+        </tr>
+
+        <!-- Service-to-Service (direct) -->
+        <tr><td colspan="5" style="background:var(--surface);font-size:11px;font-weight:700;color:var(--muted);padding:8px 14px;text-transform:uppercase;letter-spacing:0.5px">Direct Service-to-Service (via Temporal Activities)</td></tr>
+        <tr>
+          <td><span class="method post">POST</span></td>
+          <td><code>payment-service:8089/payments/intent</code></td>
+          <td><span class="chip chip-green">payment-service</span></td>
+          <td>Internal</td>
+          <td>Called by appointment-service's PaymentActivitiesImpl</td>
+        </tr>
+        <tr>
+          <td><span class="method post">POST</span></td>
+          <td><code>notification-service:8085/notifications/send</code></td>
+          <td><span class="chip chip-green">notification-service</span></td>
+          <td>Internal</td>
+          <td>Called by appointment-service's NotificationActivitiesImpl</td>
+        </tr>
+        <tr>
+          <td><span class="method post">POST</span></td>
+          <td><code>stripe.com API</code></td>
+          <td><span class="chip chip-red">Stripe (external)</span></td>
+          <td>STRIPE_SECRET_KEY</td>
+          <td>Idempotency key = appointmentId</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ KAFKA -->
+  <h2 id="kafka">Kafka Async Interactions <span class="badge">event-driven</span></h2>
+  <p class="section-intro">All async communication flows through Kafka. Services write to a transactional outbox table; Debezium captures changes via WAL and publishes to the topic. Consumers use manual ACK with exponential backoff. Failed messages go to <code>.DLQ</code> topics.</p>
+
+  <div class="kafka-matrix">
+    <table>
+      <thead>
+        <tr>
+          <th>Topic</th>
+          <th>Producer</th>
+          <th>Mechanism</th>
+          <th>Event Types</th>
+          <th>Consumers (group-id)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="topic-pill">mediq.user.events</span></td>
+          <td><span class="chip chip-green">user-service</span></td>
+          <td>Debezium outbox<br><code>mediq_users.user_outbox</code></td>
+          <td>
+            <code>USER_REGISTERED</code><br>
+            <code>USER_DEACTIVATED</code><br>
+            <code>DOCTOR_VERIFIED</code><br>
+            <code>OTP_REQUESTED</code>
+          </td>
+          <td>
+            <div style="margin-bottom:6px"><span class="consumer-tag">CONSUMES</span> <span class="chip chip-green">doctor-service</span><br><span style="color:var(--muted);font-size:11px">mediq-doctor-user-sync-group</span><br>→ creates doctor stub on USER_REGISTERED(DOCTOR)</div>
+            <div style="margin-bottom:6px"><span class="consumer-tag">CONSUMES</span> <span class="chip chip-green">appointment-service</span><br><span style="color:var(--muted);font-size:11px">mediq-appointment-user-sync-group</span><br>→ upserts PatientProjection</div>
+            <div style="margin-bottom:6px"><span class="consumer-tag">CONSUMES</span> <span class="chip chip-green">notification-service</span><br><span style="color:var(--muted);font-size:11px">mediq-notification-user-group</span><br>→ sends welcome email</div>
+            <div><span class="consumer-tag">CONSUMES</span> <span class="chip chip-green">notification-service</span><br><span style="color:var(--muted);font-size:11px">mediq-notification-otp-group</span><br>→ sends OTP via email/SMS</div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="topic-pill">mediq.doctor.events</span></td>
+          <td><span class="chip chip-green">doctor-service</span></td>
+          <td>KafkaTemplate.send<br><code>publishDoctorEvent()</code></td>
+          <td>
+            <code>DOCTOR_PROFILE_UPDATED</code><br>
+            <code>DOCTOR_SLOT_ADDED</code>
+          </td>
+          <td>
+            <div><span class="consumer-tag">CONSUMES</span> <span class="chip chip-green">appointment-service</span><br><span style="color:var(--muted);font-size:11px">mediq-appointment-doctor-sync-group</span><br>→ upserts DoctorProjection</div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="topic-pill">mediq.appointment.events</span></td>
+          <td><span class="chip chip-green">appointment-service</span></td>
+          <td>Debezium outbox<br><code>mediq_appointments.appointment_outbox</code></td>
+          <td>
+            <code>AppointmentBooked</code><br>
+            <code>AppointmentConfirmed</code><br>
+            <code>AppointmentCancelled</code><br>
+            <code>AppointmentAutoCalculated</code>
+          </td>
+          <td>
+            <div><span class="consumer-tag">CONSUMES</span> <span class="chip chip-green">notification-service</span><br><span style="color:var(--muted);font-size:11px">mediq-notification-appointment-group</span><br>→ sends confirmed/cancelled/timeout emails</div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="topic-pill">mediq.payment.events</span></td>
+          <td><span class="chip chip-green">payment-service</span></td>
+          <td>KafkaTemplate.send<br><code>recordPaymentStatus()</code></td>
+          <td>
+            <code>PAYMENT_SUCCEEDED</code><br>
+            <code>PAYMENT_FAILED</code>
+          </td>
+          <td>
+            <div><span class="consumer-tag">CONSUMES</span> <span class="chip chip-green">notification-service</span><br><span style="color:var(--muted);font-size:11px">mediq-notification-payment-group</span><br>→ sends payment failure/success email</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ AUTH FLOW -->
+  <h2 id="auth">Authentication &amp; Authorization Flow <span class="badge">Keycloak + SPI</span></h2>
+  <p class="section-intro">Login uses PKCE Authorization Code flow. The custom SPI bridges Keycloak to the user-service database — no user sync needed. Every authenticated API call is validated by KrakenD against Keycloak's JWKS, and claims are forwarded as HTTP headers.</p>
+
+  <div class="temporal-steps">
+    <div class="temporal-step">
+      <div class="ts-num">1</div>
+      <div class="ts-actor" style="color:var(--blue)">Angular Frontend</div>
+      <div class="ts-action">Redirects user to Keycloak with <strong>PKCE code_challenge</strong> (client: <code>mediq-frontend-spa</code>, scopes: openid profile email roles)</div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">2</div>
+      <div class="ts-actor" style="color:var(--purple)">Keycloak</div>
+      <div class="ts-action">Receives credentials → delegates to <strong>mediq-user-storage SPI</strong> → SPI queries <code>mediq_users.users</code> + <code>user_contact</code>, BCrypt-verifies password</div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">3</div>
+      <div class="ts-actor" style="color:var(--purple)">Keycloak SPI</div>
+      <div class="ts-action">On success: reads <code>role_permissions</code> table, attaches <strong>role</strong> (DOCTOR/PATIENT/ADMIN/NURSE), <strong>userId</strong>, <strong>userType</strong>, <strong>permissions</strong> as user attributes</div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">4</div>
+      <div class="ts-actor" style="color:var(--purple)">Keycloak</div>
+      <div class="ts-action">Issues <strong>RS256-signed JWT</strong> containing: sub, userId, email, role, userType, permissions, jti, exp — via realm-roles-mapper + attribute mappers</div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">5</div>
+      <div class="ts-actor" style="color:var(--blue)">Angular Frontend</div>
+      <div class="ts-action">Stores token, attaches as <strong>Authorization: Bearer &lt;token&gt;</strong> on every API call to KrakenD</div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">6</div>
+      <div class="ts-actor" style="color:var(--blue)">KrakenD</div>
+      <div class="ts-action">Fetches Keycloak JWKS from <code>http://keycloak:8090/realms/mediq/protocol/openid-connect/certs</code>, validates RS256 signature, checks issuer + expiry (cached 15 min)</div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">7</div>
+      <div class="ts-actor" style="color:var(--blue)">KrakenD</div>
+      <div class="ts-action">On valid token: propagates claims as headers → <code>X-User-Id</code>, <code>X-User-Email</code>, <code>X-User-Role</code>, <code>X-User-Type</code>, <code>X-User-Permissions</code>, <code>X-Token-Jti</code></div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">8</div>
+      <div class="ts-actor" style="color:var(--green)">Microservice</div>
+      <div class="ts-action">Reads <code>X-User-Permissions</code> header, enforces fine-grained access control (e.g. <code>READ_EMR</code>, <code>WRITE_APPOINTMENT_SLOT</code>) — no Spring Security, no DB call needed</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ TEMPORAL -->
+  <h2 id="temporal">Appointment Booking Workflow <span class="badge">Temporal orchestration</span></h2>
+  <p class="section-intro">Appointment booking is a multi-step saga orchestrated by Temporal. The workflow guarantees atomicity across payment and notification — if payment fails, the appointment is never confirmed. A scheduler auto-cancels stale PENDING_PAYMENT appointments after 24 hours.</p>
+
+  <div class="temporal-steps">
+    <div class="temporal-step">
+      <div class="ts-num">1</div>
+      <div class="ts-actor" style="color:var(--blue)">Frontend</div>
+      <div class="ts-action"><strong>POST /api/v1/appointments</strong> with doctorId, slotId, patientId (JWT required)</div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">2</div>
+      <div class="ts-actor" style="color:var(--green)">appointment-service</div>
+      <div class="ts-action"><strong>SELECT FOR UPDATE</strong> on slot → verify AVAILABLE → write appointment record (PENDING_PAYMENT) + outbox entry atomically</div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">3</div>
+      <div class="ts-actor" style="color:var(--yellow)">Temporal Workflow</div>
+      <div class="ts-action">appointment-service starts <strong>AppointmentBookingWorkflow</strong> on <code>appointment-booking-queue</code> with appointmentId as workflow ID</div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">4</div>
+      <div class="ts-actor" style="color:var(--yellow)">PaymentActivity</div>
+      <div class="ts-action">HTTP POST to <code>payment-service:8089/payments/intent</code> — Stripe creates PaymentIntent, returns <strong>clientSecret</strong> to frontend</div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">5</div>
+      <div class="ts-actor" style="color:var(--blue)">Frontend</div>
+      <div class="ts-action">Stripe.js confirms payment with clientSecret → Stripe webhook fires to payment-service</div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">6</div>
+      <div class="ts-actor" style="color:var(--green)">payment-service</div>
+      <div class="ts-action">Webhook handler verifies Stripe signature → records PAYMENT_SUCCEEDED → signals Temporal workflow → publishes <span class="topic-pill" style="font-size:11px">mediq.payment.events</span></div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">7</div>
+      <div class="ts-actor" style="color:var(--yellow)">Temporal Workflow</div>
+      <div class="ts-action">Receives payment signal → executes <strong>NotificationActivity</strong> → HTTP POST to <code>notification-service:8085/notifications/send</code></div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">8</div>
+      <div class="ts-actor" style="color:var(--green)">appointment-service</div>
+      <div class="ts-action">Updates appointment → CONFIRMED → writes outbox → Debezium publishes <span class="topic-pill" style="font-size:11px">mediq.appointment.events</span> (AppointmentConfirmed)</div>
+    </div>
+    <div class="temporal-step">
+      <div class="ts-num">9</div>
+      <div class="ts-actor" style="color:var(--green)">notification-service</div>
+      <div class="ts-action">Consumes AppointmentConfirmed + PAYMENT_SUCCEEDED → sends confirmation email via Mailtrap SMTP</div>
+    </div>
+    <div class="temporal-step" style="background:#e3b34108">
+      <div class="ts-num" style="background:#ff7b7222;border-color:#ff7b7255;color:var(--red)">⏱</div>
+      <div class="ts-actor" style="color:var(--red)">Timeout Path</div>
+      <div class="ts-action">PaymentTimeoutScheduler (runs every 1 min) finds appointments PENDING_PAYMENT &gt; 24h → cancels → publishes AppointmentAutoCalculated → notification-service sends timeout notice</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ OBSERVABILITY -->
+  <h2 id="observability">Observability Stack <span class="badge">traces · metrics · logs</span></h2>
+  <p class="section-intro">All services instrument via Micrometer + OpenTelemetry. Traces flow to Jaeger; metrics scraped by Prometheus and dashboarded in Grafana; logs shipped by Promtail to Loki.</p>
+
+  <div class="infra-grid">
+    <div class="infra-card accent-teal">
+      <div class="infra-icon">🔭</div>
+      <div class="infra-name">Jaeger</div>
+      <div class="infra-port">:16686 (UI) · :4317 (OTLP gRPC) · :4318 (OTLP HTTP)</div>
+      <div class="infra-desc">Distributed tracing for all services + KrakenD. Service name: <code>mediq-krakend</code>. Traces propagated via W3C TraceContext headers.</div>
+    </div>
+    <div class="infra-card accent-teal">
+      <div class="infra-icon">📈</div>
+      <div class="infra-name">Prometheus</div>
+      <div class="infra-port">:9090</div>
+      <div class="infra-desc">Scrapes <code>/actuator/prometheus</code> on all Spring Boot services. Alert rules: HighErrorRate, HighLatency, KafkaLag, ServiceDown.</div>
+    </div>
+    <div class="infra-card accent-teal">
+      <div class="infra-icon">📊</div>
+      <div class="infra-name">Grafana</div>
+      <div class="infra-port">:3000</div>
+      <div class="infra-desc">Pre-provisioned datasources (Prometheus + Loki). Dashboard: <code>mediq-overview.json</code> covering all services.</div>
+    </div>
+    <div class="infra-card accent-teal">
+      <div class="infra-icon">📝</div>
+      <div class="infra-name">Loki</div>
+      <div class="infra-port">:3100</div>
+      <div class="infra-desc">Log aggregation backend. Grafana datasource for log queries alongside metrics.</div>
+    </div>
+    <div class="infra-card accent-teal">
+      <div class="infra-icon">🚚</div>
+      <div class="infra-name">Promtail</div>
+      <div class="infra-port">sidecar / agent</div>
+      <div class="infra-desc">Collects Docker container logs, labels by service name, ships to Loki.</div>
+    </div>
+    <div class="infra-card accent-yellow">
+      <div class="infra-icon">⏱️</div>
+      <div class="infra-name">Temporal UI</div>
+      <div class="infra-port">:8088</div>
+      <div class="infra-desc">Workflow visibility: running/completed/failed appointment booking workflows, activity history, retry state.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ PORT INDEX -->
+  <h2 id="ports">Service Index <span class="badge">ports · databases · roles</span></h2>
+
+  <div class="route-table">
+    <table>
+      <thead>
+        <tr><th>Service</th><th>Port</th><th>Database</th><th>Produces (Kafka)</th><th>Consumes (Kafka)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="chip chip-blue">Angular Frontend</span></td>
+          <td><code>4200</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-blue">KrakenD</span></td>
+          <td><code>8080</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-green">user-service</span></td>
+          <td><code>8081</code></td>
+          <td><code>mediq_users</code></td>
+          <td><span class="topic-pill">mediq.user.events</span></td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-gray">referral-service</span></td>
+          <td><code>8082</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-green">doctor-service</span></td>
+          <td><code>8083</code></td>
+          <td><code>mediq_doctors</code></td>
+          <td><span class="topic-pill">mediq.doctor.events</span></td>
+          <td><span class="topic-pill">mediq.user.events</span></td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-green">appointment-service</span></td>
+          <td><code>8084</code></td>
+          <td><code>mediq_appointments</code></td>
+          <td><span class="topic-pill">mediq.appointment.events</span></td>
+          <td><span class="topic-pill">mediq.user.events</span> <span class="topic-pill">mediq.doctor.events</span></td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-green">notification-service</span></td>
+          <td><code>8085</code></td>
+          <td><code>mediq_notifications</code></td>
+          <td>—</td>
+          <td><span class="topic-pill">mediq.user.events</span> <span class="topic-pill">mediq.appointment.events</span> <span class="topic-pill">mediq.payment.events</span></td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-green">emr-service</span></td>
+          <td><code>8086</code></td>
+          <td><code>mediq_emr</code></td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-green">analytics-service</span></td>
+          <td><code>8087</code></td>
+          <td><code>mediq_analytics</code></td>
+          <td>—</td>
+          <td>CDC (all topics via Debezium)</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-yellow">Temporal UI</span></td>
+          <td><code>8088</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-green">payment-service</span></td>
+          <td><code>8089</code></td>
+          <td><code>mediq_payments</code></td>
+          <td><span class="topic-pill">mediq.payment.events</span></td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-purple">Keycloak</span></td>
+          <td><code>8090</code></td>
+          <td>internal</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-orange">Debezium (user)</span></td>
+          <td><code>8091</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-orange">Debezium (appointment)</span></td>
+          <td><code>8092</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-orange">Debezium (payment)</span></td>
+          <td><code>8093</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-orange">Debezium (doctor)</span></td>
+          <td><code>8094</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-orange">Debezium (emr)</span></td>
+          <td><code>8095</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-red">PostgreSQL</span></td>
+          <td><code>5432</code></td>
+          <td>7 schemas</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-red">Redis</span></td>
+          <td><code>6379</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-orange">Kafka</span></td>
+          <td><code>9092</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-yellow">Temporal Server</span></td>
+          <td><code>7233</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-teal">Jaeger</span></td>
+          <td><code>16686</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-teal">Prometheus</span></td>
+          <td><code>9090</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-teal">Grafana</span></td>
+          <td><code>3000</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip-teal">Loki</span></td>
+          <td><code>3100</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

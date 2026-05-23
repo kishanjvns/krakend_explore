@@ -1,5 +1,5 @@
-﻿{
-  "endpoint": "/api/v1/users/patients/register",
+
+{  "endpoint": "/api/v1/users/patients/register",
   "method": "POST",
   "output_encoding": "no-op",
   "backend": [{
@@ -21,6 +21,7 @@
 {
   "endpoint": "/api/v1/users/{userId}",
   "method": "GET",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     "qos/ratelimit/router": { "max_rate": 300, "capacity": 300 },
     {{ template "jwt_validator.tmpl" . }}
@@ -38,6 +39,7 @@
 {
   "endpoint": "/api/v1/users/{userId}",
   "method": "DELETE",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     {{ template "jwt_validator.tmpl" . }}
   },
@@ -54,13 +56,15 @@
 {
   "endpoint": "/api/v1/users/doctors/pending-verification",
   "method": "GET",
+  "output_encoding": "no-op",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/users/doctors/pending-verification",
     "host": ["{{ .hosts.user_service }}"],
-    "encoding": "json",
+    "encoding": "no-op",
     "extra_config": {
       {{ template "rate_limit_proxy.tmpl" . }},
       {{ template "circuit_breaker.tmpl" . }}
@@ -70,6 +74,7 @@
 {
   "endpoint": "/api/v1/users/doctors/{doctorUserId}/verify",
   "method": "PUT",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     {{ template "jwt_validator.tmpl" . }}
   },
@@ -86,13 +91,15 @@
 {
   "endpoint": "/api/v1/admin/roles",
   "method": "GET",
+  "output_encoding": "no-op",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/admin/roles",
     "host": ["{{ .hosts.user_service }}"],
-    "encoding": "json",
+    "encoding": "no-op",
     "extra_config": {
       {{ template "rate_limit_proxy.tmpl" . }},
       {{ template "circuit_breaker.tmpl" . }}
@@ -102,6 +109,7 @@
 {
   "endpoint": "/api/v1/admin/roles/{roleName}/permissions",
   "method": "PUT",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     {{ template "jwt_validator.tmpl" . }}
   },
@@ -118,13 +126,15 @@
 {
   "endpoint": "/api/v1/admin/permissions",
   "method": "GET",
+  "output_encoding": "no-op",
+  {{ template "input_headers_auth.tmpl" . }},
   "extra_config": {
     {{ template "jwt_validator.tmpl" . }}
   },
   "backend": [{
     "url_pattern": "/admin/permissions",
     "host": ["{{ .hosts.user_service }}"],
-    "encoding": "json",
+    "encoding": "no-op",
     "extra_config": {
       {{ template "rate_limit_proxy.tmpl" . }},
       {{ template "circuit_breaker.tmpl" . }}
@@ -134,6 +144,7 @@
 {
   "endpoint": "/api/v1/users/{userId}/send-otp",
   "method": "POST",
+  "timeout": "30s",
   "output_encoding": "no-op",
   "backend": [{
     "url_pattern": "/users/{userId}/send-otp",
@@ -148,6 +159,7 @@
 {
   "endpoint": "/api/v1/users/{userId}/verify-otp",
   "method": "POST",
+  "timeout": "30s",
   "output_encoding": "no-op",
   "backend": [{
     "url_pattern": "/users/{userId}/verify-otp",

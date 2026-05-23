@@ -31,8 +31,8 @@ public class KafkaConfig {
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 10);
 
-        JsonDeserializer<UserEvent> deserializer = new JsonDeserializer<>(UserEvent.class);
-        deserializer.addTrustedPackages("com.mediq.event");
+        JsonDeserializer<UserEvent> deserializer = new JsonDeserializer<>(UserEvent.class, false);
+        deserializer.addTrustedPackages("*");
 
         return new DefaultKafkaConsumerFactory<>(props,
             new StringDeserializer(), deserializer);
@@ -55,7 +55,7 @@ public class KafkaConfig {
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
-        JsonDeserializer<OtpVerifiedEvent> deserializer = new JsonDeserializer<>(OtpVerifiedEvent.class);
+        JsonDeserializer<OtpVerifiedEvent> deserializer = new JsonDeserializer<>(OtpVerifiedEvent.class, false);
         deserializer.addTrustedPackages("*");
 
         return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);

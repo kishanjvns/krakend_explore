@@ -1,5 +1,7 @@
 package com.mediq.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -13,6 +15,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private static final String BLACKLIST_KEY_PREFIX = "token:blacklist:";
 
@@ -31,6 +35,7 @@ public class AuthController {
             @RequestHeader(value = "X-User-Type",        required = false) String userType,
             @RequestHeader(value = "X-User-Permissions", required = false) String permissionsHeader) {
 
+        log.debug("GET /auth/me userId={} role={}", userId, role);
         List<String> permissions = permissionsHeader != null
             ? List.of(permissionsHeader.split(","))
             : List.of();
@@ -50,6 +55,7 @@ public class AuthController {
             @RequestHeader("X-Token-Jti") String jti,
             @RequestHeader("X-Token-Exp") String expEpochSeconds) {
 
+        log.info("POST /auth/logout jti={}", jti);
         try {
             long expSeconds     = Long.parseLong(expEpochSeconds);
             long nowSeconds     = Instant.now().getEpochSecond();
@@ -61,8 +67,13 @@ public class AuthController {
                     "revoked",
                     Duration.ofSeconds(remainingTtl)
                 );
+                log.info("Token jti={} added to blacklist ttl={}s", jti, remainingTtl);
+            } else {
+                log.debug("Token jti={} already expired (remainingTtl={}s), skipping blacklist", jti, remainingTtl);
             }
-        } catch (NumberFormatException ignored) {}
+        } catch (NumberFormatException e) {
+            log.warn("Could not parse X-Token-Exp='{}' for jti={}: {}", expEpochSeconds, jti, e.getMessage());
+        }
 
         return ResponseEntity.ok().build();
     }
