@@ -1,0 +1,4 @@
+image: prom/prometheus:v2.51.0
+port: 9090
+storage: 5Gi
+enabled: true

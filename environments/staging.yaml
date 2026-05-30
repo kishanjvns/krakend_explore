@@ -3,6 +3,12 @@ namespace: mediq-staging
 postgres:
   storage: 5Gi
 
+loki:
+  storage: 5Gi
+
+prometheus:
+  storage: 10Gi
+
 userService:
   replicas: 1
   resources:

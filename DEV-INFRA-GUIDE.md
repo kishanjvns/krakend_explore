@@ -14,6 +14,7 @@ Windows Host
                               30080 → 8080   (KrakenD)
                               30090 → 8090   (Keycloak)
                               30086 → 16686  (Jaeger)
+                              30030 → 3000   (Grafana)
 ```
 
 **Key mental model:** Everything runs natively on Windows. Docker Desktop provides the Docker engine. Kind creates the k8s cluster as Docker containers. kubectl/helm/helmfile talk directly to Kind — no WSL, no IP translation, no kubeconfig export steps.
@@ -70,6 +71,8 @@ kubectl get pods -n mediq-dev -w
 | KrakenD | http://localhost:8080 |
 | Keycloak Admin | http://localhost:8090 (admin / admin) |
 | Jaeger | http://localhost:16686 |
+| Prometheus | http://localhost:9090 (ClusterIP or forwarded) |
+| Grafana | http://localhost:3000 (admin / mediq) |
 
 ---
 
@@ -170,6 +173,10 @@ docker pull --platform linux/amd64 confluentinc/cp-kafka:7.6.0
 docker pull --platform linux/amd64 quay.io/keycloak/keycloak:24.0.3
 docker pull --platform linux/amd64 temporalio/auto-setup:1.24.2
 docker pull --platform linux/amd64 temporalio/ui:2.26.2
+docker pull --platform linux/amd64 grafana/loki:2.9.6
+docker pull --platform linux/amd64 grafana/promtail:2.9.6
+docker pull --platform linux/amd64 prom/prometheus:v2.51.0
+docker pull --platform linux/amd64 grafana/grafana:10.4.2
 ```
 
 If you already pulled without `--platform`, `docker rmi` first and re-pull. If the error persists (manifest list cached), use buildx to create a clean single-platform image:

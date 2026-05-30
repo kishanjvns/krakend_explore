@@ -1,0 +1,4 @@
+apiVersion: v2
+name: mediq-promtail
+description: Promtail log shipping agent for mediq
+version: 0.1.0

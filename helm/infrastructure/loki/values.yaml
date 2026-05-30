@@ -1,0 +1,4 @@
+image: grafana/loki:2.9.6
+port: 3100
+storage: 2Gi
+enabled: true

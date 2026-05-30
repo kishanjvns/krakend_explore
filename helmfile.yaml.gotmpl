@@ -84,6 +84,45 @@ releases:
     values:
       - ./helm/infrastructure/jaeger/values.yaml
 
+  - name: mediq-loki
+    chart: ./helm/infrastructure/loki
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-namespace
+    values:
+      - ./helm/infrastructure/loki/values.yaml
+    set:
+      - name: storage
+        value: {{ .Environment.Values.loki.storage }}
+
+  - name: mediq-promtail
+    chart: ./helm/infrastructure/promtail
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-loki
+    values:
+      - ./helm/infrastructure/promtail/values.yaml
+
+  - name: mediq-prometheus
+    chart: ./helm/infrastructure/prometheus
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-namespace
+    values:
+      - ./helm/infrastructure/prometheus/values.yaml
+    set:
+      - name: storage
+        value: {{ .Environment.Values.prometheus.storage }}
+
+  - name: mediq-grafana
+    chart: ./helm/infrastructure/grafana
+    namespace: {{ .Environment.Values.namespace }}
+    needs:
+      - {{ .Environment.Values.namespace }}/mediq-prometheus
+      - {{ .Environment.Values.namespace }}/mediq-loki
+    values:
+      - ./helm/infrastructure/grafana/values.yaml
+
   - name: mediq-temporal
     chart: ./helm/infrastructure/temporal
     namespace: {{ .Environment.Values.namespace }}

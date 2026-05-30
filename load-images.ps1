@@ -12,7 +12,11 @@ $images = @(
   "confluentinc/cp-kafka:7.6.0",
   "quay.io/keycloak/keycloak:24.0.3",
   "temporalio/auto-setup:1.24.2",
-  "temporalio/ui:2.26.2"
+  "temporalio/ui:2.26.2",
+  "grafana/loki:2.9.6",
+  "grafana/promtail:2.9.6",
+  "prom/prometheus:v2.51.0",
+  "grafana/grafana:10.4.2"
 )
 
 foreach ($img in $images) {

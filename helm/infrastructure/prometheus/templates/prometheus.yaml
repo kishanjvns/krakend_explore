@@ -1,0 +1,176 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-pvc
+  namespace: {{ .Release.Namespace }}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: {{ .Values.storage }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: {{ .Release.Namespace }}
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    rule_files:
+      - /etc/prometheus/alert-rules.yml
+
+    scrape_configs:
+      - job_name: user-service
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ['user-service:8081']
+
+      - job_name: doctor-service
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ['doctor-service:8083']
+
+      - job_name: appointment-service
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ['appointment-service:8084']
+
+      - job_name: notification-service
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ['notification-service:8085']
+
+      - job_name: emr-service
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ['emr-service:8086']
+
+      - job_name: analytics-service
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ['analytics-service:8087']
+
+  alert-rules.yml: |
+    groups:
+      - name: mediq-alerts
+        rules:
+          - alert: HighErrorRate
+            expr: |
+              (
+                rate(http_server_requests_seconds_count{status=~"5.."}[5m])
+                /
+                rate(http_server_requests_seconds_count[5m])
+              ) > 0.05
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High 5xx error rate on {{ $labels.job }}"
+              description: "Error rate is {{ $value | humanizePercentage }} on {{ $labels.job }}"
+
+          - alert: HighLatency
+            expr: |
+              histogram_quantile(0.99,
+                rate(http_server_requests_seconds_bucket[5m])
+              ) > 0.5
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High p99 latency on {{ $labels.job }}"
+              description: "p99 latency is {{ $value }}s on {{ $labels.job }}"
+
+          - alert: KafkaConsumerLagHigh
+            expr: kafka_consumer_group_lag > 1000
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Kafka consumer group {{ $labels.consumergroup }} lag is high"
+              description: "Lag is {{ $value }} on topic {{ $labels.topic }}"
+
+          - alert: ServiceDown
+            expr: up == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Service {{ $labels.job }} is unreachable"
+              description: "Prometheus cannot scrape {{ $labels.job }} at {{ $labels.instance }}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      securityContext:
+        fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+      containers:
+        - name: prometheus
+          image: {{ .Values.image }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--web.enable-lifecycle"
+          ports:
+            - containerPort: {{ .Values.port }}
+              name: web
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: {{ .Values.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: {{ .Values.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+            - name: storage
+              mountPath: /prometheus
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+        - name: storage
+          persistentVolumeClaim:
+            claimName: prometheus-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: prometheus
+  ports:
+    - port: {{ .Values.port }}
+      targetPort: {{ .Values.port }}
+{{- end }}

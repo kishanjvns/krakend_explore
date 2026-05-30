@@ -1,0 +1,5 @@
+image: grafana/grafana:10.4.2
+port: 3000
+adminPassword: mediq
+nodePort: 30030
+enabled: true

@@ -1,0 +1,4 @@
+apiVersion: v2
+name: mediq-prometheus
+description: Prometheus metrics scraper for mediq
+version: 0.1.0

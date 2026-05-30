@@ -3,6 +3,12 @@ namespace: mediq-dev
 postgres:
   storage: 2Gi
 
+loki:
+  storage: 2Gi
+
+prometheus:
+  storage: 5Gi
+
 userService:
   replicas: 1
   resources:
